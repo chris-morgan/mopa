@@ -1,0 +1,11 @@
+language: rust
+#env:
+#  global:
+#    - secure: TODO
+#script:
+#  - cargo build --verbose
+#  - cargo test --verbose
+#  - cargo doc --verbose
+#after_script:
+#  - ln -s target/doc doc
+#  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
