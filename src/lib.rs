@@ -30,10 +30,18 @@
 //! > But I’m not, so I guess I’ll just wait.”
 //!
 //! A pitiful tale, isn’t it? Especially given that there was a bear chasing it with intent to eat
-//! it. Fortunately now you can *mopafy* `Person` in two simple steps:
+//! it. Fortunately now you can *mopafy* `Person` in three simple steps:
 //!
-//! 1. Make `Any` a supertrait of `Person`;
-//! 2. `mopafy!(Person);`.
+//! 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
+//!
+//!    ```rust,ignore
+//!    #[macro_use] #[no_link]
+//!    extern crate mopa;
+//!    ```
+//!
+//! 2. Make `Any` a supertrait of `Person`;
+//!
+//! 3. `mopafy!(Person);`.
 //!
 //! And lo, you can now write `person.is::<Benny>()` and `person.downcast_ref::<Benny>()` and so on
 //! to your heart’s content. Simple, huh?
@@ -42,9 +50,7 @@
 //! `Person`’s plate after all.
 //!
 //! ```rust
-//! #![feature(phase)]
-//!
-//! #[phase(plugin)]
+//! #[macro_use] #[no_link]
 //! extern crate mopa;
 //!
 //! use std::any::Any;
@@ -128,7 +134,6 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![feature(macro_rules)]
 #![unstable = "a little too early to guarantee stability, especially with macros unstable"]
 
 /// The macro for implementing all the `Any` methods on your own trait.
@@ -150,8 +155,7 @@
 /// 1. If you are a **normal person**:
 ///
 ///    ```rust
-///    # #![feature(phase)]
-///    # #[phase(plugin)] extern crate mopa;
+///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # trait Trait: std::any::Any { }
 ///    mopafy!(Trait);
 ///    # fn main() { }
@@ -160,8 +164,7 @@
 /// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc:
 ///
 ///    ```rust
-///    # #![feature(phase)]
-///    # #[phase(plugin)] extern crate mopa;
+///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # extern crate core;
 ///    # trait Trait: core::any::Any { }
 ///    mopafy!(Trait, core = core);
@@ -176,8 +179,7 @@
 /// 3. If you are using **libcore and liballoc** but not libstd (`#![nostd]`):
 ///
 ///    ```rust
-///    # #![feature(phase)]
-///    # #[phase(plugin)] extern crate mopa;
+///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # extern crate core;
 ///    # extern crate alloc;
 ///    # trait Trait: core::any::Any { }

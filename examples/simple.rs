@@ -1,19 +1,13 @@
-#![feature(phase)]
-
-#[phase(plugin)]
+#[macro_use] #[no_link]
 extern crate mopa;
 
 use std::any::Any;
 
-trait Panic { }
-
-trait PanicAny: Panic + Any { }
+trait PanicAny: Any { }
 
 mopafy!(PanicAny);
 
-impl Panic for int { }
-
-impl<T: Panic + Any + 'static> PanicAny for T { }
+impl PanicAny for int { }
 
 fn main() {
     let p = &2i as &PanicAny;

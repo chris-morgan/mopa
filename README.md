@@ -1,4 +1,4 @@
-mopa 0.1.0
+mopa 0.1.1
 ==========
 
 [![Build Status](https://travis-ci.org/chris-morgan/mopa.svg?branch=master)](https://travis-ci.org/chris-morgan/mopa)
@@ -22,10 +22,18 @@ anyway). So what do you do instead? Do you give up? No, no! No, no! Enter MOPA.
 > But I’m not, so I guess I’ll just wait.”
 
 A pitiful tale, isn’t it? Especially given that there was a bear chasing it with intent to eat
-it. Fortunately now you can *mopafy* `Person` in two simple steps:
+it. Fortunately now you can *mopafy* `Person` in three simple steps:
 
-1. Make `Any` a supertrait of `Person`;
-2. `mopafy!(Person);`.
+1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
+
+   ```rust,ignore
+   #[macro_use] #[no_link]
+   extern crate mopa;
+   ```
+
+2. Make `Any` a supertrait of `Person`;
+
+3. `mopafy!(Person);`.
 
 And lo, you can now write `person.is::<Benny>()` and `person.downcast_ref::<Benny>()` and so on
 to your heart’s content. Simple, huh?
@@ -34,9 +42,7 @@ Oh, by the way, it was actually the person on the bear’s plate. There wasn’t
 `Person`’s plate after all.
 
 ```rust
-#![feature(phase)]
-
-#[phase(plugin)]
+#[macro_use] #[no_link]
 extern crate mopa;
 
 use std::any::Any;

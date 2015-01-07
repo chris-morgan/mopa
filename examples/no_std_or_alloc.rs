@@ -1,7 +1,7 @@
-#![feature(phase, lang_items)]
+#![feature(lang_items)]
 #![no_std]
 
-#[phase(plugin)]
+#[macro_use] #[no_link]
 extern crate mopa;
 
 extern crate core;
