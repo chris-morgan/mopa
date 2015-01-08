@@ -5,9 +5,7 @@
 extern crate mopa;
 
 extern crate core;
-
-// Hmm, needs to be linked or it won’t compile as a binary. Meh. We’re not using it, though.
-extern crate "alloc" as alloc_seriously_unused_this_is_just_to_satisfy_the_linker;
+extern crate libc;
 
 trait Panic { }
 
