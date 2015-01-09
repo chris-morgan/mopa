@@ -121,8 +121,8 @@
 //!
 //! fn main() {
 //!     let mut bear = Bear { fatness: 10 };
-//!     simulate_simulation(box Benny { kilograms_of_food: 5 }, &mut bear);
-//!     simulate_simulation(box Chris, &mut bear);
+//!     simulate_simulation(Box::new(Benny { kilograms_of_food: 5 }), &mut bear);
+//!     simulate_simulation(Box::new(Chris), &mut bear);
 //! }
 //! ```
 //!
@@ -134,7 +134,8 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![unstable = "a little too early to guarantee stability, especially with macros unstable"]
+#![unstable = "a little too early to guarantee stability"]
+#![allow(unstable)]
 
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
@@ -165,7 +166,7 @@
 ///
 ///    ```rust
 ///    # #[macro_use] #[no_link] extern crate mopa;
-///    # extern crate core;
+///    # #[allow(unstable)] extern crate core;
 ///    # trait Trait: core::any::Any { }
 ///    mopafy!(Trait, core = core);
 ///    # fn main() { }
@@ -180,8 +181,8 @@
 ///
 ///    ```rust
 ///    # #[macro_use] #[no_link] extern crate mopa;
-///    # extern crate core;
-///    # extern crate alloc;
+///    # #[allow(unstable)] extern crate core;
+///    # #[allow(unstable)] extern crate alloc;
 ///    # trait Trait: core::any::Any { }
 ///    mopafy!(Trait, core = core, alloc = alloc);
 ///    # fn main() { }
@@ -192,7 +193,7 @@
 ///
 ///    This gets you all the methods.
 #[macro_export]
-#[unstable = "a little too early to guarantee stability, especially with macros unstable"]
+#[unstable = "a little too early to guarantee stability"]
 macro_rules! mopafy {
     // Using libstd like a normal person? Here’s what you want, just a simple `mopafy!(Trait)`.
     ($trait_:ty) => {

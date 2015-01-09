@@ -4,8 +4,8 @@
 #[macro_use] #[no_link]
 extern crate mopa;
 
-extern crate core;
-extern crate libc;
+#[allow(unstable)] extern crate core;
+#[allow(unstable)] extern crate libc;
 
 trait Panic { }
 
@@ -13,14 +13,14 @@ trait PanicAny: Panic + core::any::Any { }
 
 mopafy!(PanicAny, core = core);
 
-impl Panic for int { }
+impl Panic for i32 { }
 
 impl<T: Panic + core::any::Any + 'static> PanicAny for T { }
 
 #[start]
-fn start(_argc: int, _argv: *const *const u8) -> int {
-    let p = &2i as &PanicAny;
-    if p.is::<int>() {
+fn start(_argc: isize, _argv: *const *const u8) -> isize {
+    let p = &2 as &PanicAny;
+    if p.is::<i32>() {
         0
     } else {
         1

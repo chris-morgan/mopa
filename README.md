@@ -1,4 +1,4 @@
-mopa 0.1.1
+mopa 0.1.2
 ==========
 
 [![Build Status](https://travis-ci.org/chris-morgan/mopa.svg?branch=master)](https://travis-ci.org/chris-morgan/mopa)
@@ -113,8 +113,8 @@ fn simulate_simulation(person: Box<Person>, bear: &mut Bear) {
 
 fn main() {
     let mut bear = Bear { fatness: 10 };
-    simulate_simulation(box Benny { kilograms_of_food: 5 }, &mut bear);
-    simulate_simulation(box Chris, &mut bear);
+    simulate_simulation(Box::new(Benny { kilograms_of_food: 5 }), &mut bear);
+    simulate_simulation(Box::new(Chris), &mut bear);
 }
 ```
 

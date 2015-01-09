@@ -7,9 +7,9 @@ trait PanicAny: Any { }
 
 mopafy!(PanicAny);
 
-impl PanicAny for int { }
+impl PanicAny for i32 { }
 
 fn main() {
-    let p = &2i as &PanicAny;
-    println!("{}", p.is::<int>());
+    let p = &2 as &PanicAny;
+    println!("{}", p.is::<i32>());
 }
