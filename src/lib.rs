@@ -212,7 +212,7 @@ macro_rules! mopafy {
                 use $core::any::Any;
 
                 // Get TypeId of the type this function is instantiated with
-                let t = ::$core::intrinsics::TypeId::of::<T>();
+                let t = ::$core::any::TypeId::of::<T>();
 
                 // Get TypeId of the type in the trait object
                 let boxed = self.get_type_id();
@@ -223,7 +223,7 @@ macro_rules! mopafy {
 
             /// Returns some reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
-            #[unstable = "naming conventions around acquiring references may change"]
+            #[stable]
             #[inline]
             pub fn downcast_ref<T: 'static>(&self) -> ::$core::option::Option<&T> {
                 if self.is::<T>() {
@@ -249,7 +249,7 @@ macro_rules! mopafy {
 
             /// Returns some mutable reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
-            #[unstable = "naming conventions around acquiring references may change"]
+            #[stable]
             #[inline]
             pub fn downcast_mut<T: 'static>(&mut self) -> ::$core::option::Option<&mut T> {
                 if self.is::<T>() {
@@ -283,7 +283,7 @@ macro_rules! mopafy {
         impl $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
-            #[unstable = "method may be renamed with respect to other downcasting methods"]
+            #[stable]
             pub fn downcast<T: 'static>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$core::result::Result<::$alloc::boxed::Box<T>,
                                                ::$alloc::boxed::Box<Self>> {

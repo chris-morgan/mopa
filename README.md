@@ -1,4 +1,4 @@
-mopa 0.1.2
+mopa 0.1.3
 ==========
 
 [![Build Status](https://travis-ci.org/chris-morgan/mopa.svg?branch=master)](https://travis-ci.org/chris-morgan/mopa)
