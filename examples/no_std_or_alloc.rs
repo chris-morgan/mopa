@@ -1,11 +1,11 @@
-#![feature(lang_items, start)]
+#![feature(lang_items, start, core, libc)]
 #![no_std]
 
 #[macro_use] #[no_link]
 extern crate mopa;
 
-#[allow(unstable)] extern crate core;
-#[allow(unstable)] extern crate libc;
+extern crate core;
+extern crate libc;
 
 trait Panic { }
 

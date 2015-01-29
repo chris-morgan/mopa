@@ -1,6 +1,6 @@
 [package]
 name = "mopa"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Chris Morgan <me@chrismorgan.info>"]
 description = "My Own Personal Any: get your own Any with additional functionality"
 #documentation = 

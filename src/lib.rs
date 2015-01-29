@@ -135,7 +135,6 @@
 //! don’t have a really good example of such a use case here at present. TODO.
 
 #![unstable = "a little too early to guarantee stability"]
-#![allow(unstable)]
 
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
@@ -166,7 +165,7 @@
 ///
 ///    ```rust
 ///    # #[macro_use] #[no_link] extern crate mopa;
-///    # #[allow(unstable)] extern crate core;
+///    # extern crate core;
 ///    # trait Trait: core::any::Any { }
 ///    mopafy!(Trait, core = core);
 ///    # fn main() { }
@@ -181,8 +180,8 @@
 ///
 ///    ```rust
 ///    # #[macro_use] #[no_link] extern crate mopa;
-///    # #[allow(unstable)] extern crate core;
-///    # #[allow(unstable)] extern crate alloc;
+///    # extern crate core;
+///    # extern crate alloc;
 ///    # trait Trait: core::any::Any { }
 ///    mopafy!(Trait, core = core, alloc = alloc);
 ///    # fn main() { }
