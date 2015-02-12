@@ -1,4 +1,4 @@
-#![feature(lang_items, start, core, libc)]
+#![feature(lang_items, start, core, libc, no_std)]
 #![no_std]
 
 #[macro_use] #[no_link]
