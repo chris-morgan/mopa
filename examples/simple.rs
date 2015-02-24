@@ -1,3 +1,5 @@
+#![feature(core)]
+
 #[macro_use] #[no_link]
 extern crate mopa;
 

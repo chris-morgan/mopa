@@ -7,7 +7,7 @@ extern crate mopa;
 extern crate core;
 extern crate alloc;
 
-trait Panic { }
+trait Panic { fn panic(&self) { } }
 
 trait PanicAny: Panic + core::any::Any { }
 
