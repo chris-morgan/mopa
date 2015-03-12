@@ -134,8 +134,6 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![unstable = "a little too early to guarantee stability"]
-
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
 /// # Instructions for use
@@ -192,7 +190,6 @@
 ///
 ///    This gets you all the methods.
 #[macro_export]
-#[unstable = "a little too early to guarantee stability"]
 macro_rules! mopafy {
     // Using libstd like a normal person? Here’s what you want, just a simple `mopafy!(Trait)`.
     ($trait_:ty) => {
@@ -205,7 +202,6 @@ macro_rules! mopafy {
     ($trait_:ty, core = $core:ident) => {
         impl $trait_ {
             /// Returns true if the boxed type is the same as `T`
-            #[stable]
             #[inline]
             pub fn is<T: 'static>(&self) -> bool {
                 use $core::any::Any;
@@ -222,7 +218,6 @@ macro_rules! mopafy {
 
             /// Returns some reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
-            #[stable]
             #[inline]
             pub fn downcast_ref<T: 'static>(&self) -> ::$core::option::Option<&T> {
                 if self.is::<T>() {
@@ -236,7 +231,6 @@ macro_rules! mopafy {
 
             /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[unstable = "naming conventions around acquiring references may change"]
             #[inline]
             pub unsafe fn downcast_ref_unchecked<T: 'static>(&self) -> &T {
                 // Get the raw representation of the trait object
@@ -248,7 +242,6 @@ macro_rules! mopafy {
 
             /// Returns some mutable reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
-            #[stable]
             #[inline]
             pub fn downcast_mut<T: 'static>(&mut self) -> ::$core::option::Option<&mut T> {
                 if self.is::<T>() {
@@ -262,7 +255,6 @@ macro_rules! mopafy {
 
             /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[unstable = "naming conventions around acquiring references may change"]
             #[inline]
             pub unsafe fn downcast_mut_unchecked<T: 'static>(&mut self) -> &mut T {
                 // Get the raw representation of the trait object
@@ -282,7 +274,6 @@ macro_rules! mopafy {
         impl $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
-            #[stable]
             pub fn downcast<T: 'static>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$core::result::Result<::$alloc::boxed::Box<T>,
                                                ::$alloc::boxed::Box<Self>> {
@@ -298,7 +289,6 @@ macro_rules! mopafy {
             /// Returns the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
-            #[unstable = "method may be renamed with respect to other downcasting methods"]
             pub unsafe fn downcast_unchecked<T: 'static>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$alloc::boxed::Box<T> {
                 // Get the raw representation of the trait object
