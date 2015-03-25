@@ -50,6 +50,7 @@
 //! `Person`’s plate after all.
 //!
 //! ```rust
+//! #![feature(core)]
 //! #[macro_use] #[no_link]
 //! extern crate mopa;
 //!
@@ -153,6 +154,7 @@
 /// 1. If you are a **normal person**:
 ///
 ///    ```rust
+///    # #![feature(core)]
 ///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # trait Trait: std::any::Any { }
 ///    mopafy!(Trait);
@@ -162,6 +164,7 @@
 /// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc:
 ///
 ///    ```rust
+///    # #![feature(core)]
 ///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # extern crate core;
 ///    # trait Trait: core::any::Any { }
@@ -177,6 +180,7 @@
 /// 3. If you are using **libcore and liballoc** but not libstd (`#![nostd]`):
 ///
 ///    ```rust
+///    # #![feature(core, alloc)]
 ///    # #[macro_use] #[no_link] extern crate mopa;
 ///    # extern crate core;
 ///    # extern crate alloc;

@@ -19,7 +19,7 @@ impl<T: Panic + core::any::Any + 'static> PanicAny for T { }
 
 #[start]
 fn start(_argc: isize, _argv: *const *const u8) -> isize {
-    let p = &2 as &PanicAny;
+    let p: &PanicAny = &2;
     if p.is::<i32>() {
         0
     } else {
