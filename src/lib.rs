@@ -196,34 +196,25 @@
 #[macro_export]
 macro_rules! mopafy {
     // Using libstd like a normal person? Here’s what you want, just a simple `mopafy!(Trait)`.
-    ($trait_:ty) => {
+    ($trait_:ident) => {
         mopafy!($trait_, core = std, alloc = std);
     };
 
     // Not using libstd or liballoc? You can get the &Any and &mut Any methods by specifying what
     // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
     // methods.
-    ($trait_:ty, core = $core:ident) => {
+    ($trait_:ident, core = $core:ident) => {
         impl $trait_ {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
-            pub fn is<T: 'static>(&self) -> bool {
-                use $core::any::Any;
-
-                // Get TypeId of the type this function is instantiated with
-                let t = ::$core::any::TypeId::of::<T>();
-
-                // Get TypeId of the type in the trait object
-                let boxed = self.get_type_id();
-
-                // Compare both TypeIds on equality
-                t == boxed
+            pub fn is<T: $trait_>(&self) -> bool {
+                ::$core::any::TypeId::of::<T>() == ::$core::any::TypeId::of::<Self>()
             }
 
             /// Returns some reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
             #[inline]
-            pub fn downcast_ref<T: 'static>(&self) -> ::$core::option::Option<&T> {
+            pub fn downcast_ref<T: $trait_>(&self) -> ::$core::option::Option<&T> {
                 if self.is::<T>() {
                     unsafe {
                         ::$core::option::Option::Some(self.downcast_ref_unchecked())
@@ -236,18 +227,16 @@ macro_rules! mopafy {
             /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
-            pub unsafe fn downcast_ref_unchecked<T: 'static>(&self) -> &T {
-                // Get the raw representation of the trait object
-                let to: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-
-                // Extract the data pointer
-                ::$core::mem::transmute(to.data)
+            pub unsafe fn downcast_ref_unchecked<T: $trait_>
+                                                (&self) -> &T {
+                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                ::$core::mem::transmute(trait_object.data)
             }
 
             /// Returns some mutable reference to the boxed value if it is of type `T`, or
             /// `None` if it isn't.
             #[inline]
-            pub fn downcast_mut<T: 'static>(&mut self) -> ::$core::option::Option<&mut T> {
+            pub fn downcast_mut<T: $trait_>(&mut self) -> ::$core::option::Option<&mut T> {
                 if self.is::<T>() {
                     unsafe {
                         ::$core::option::Option::Some(self.downcast_mut_unchecked())
@@ -260,25 +249,23 @@ macro_rules! mopafy {
             /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
-            pub unsafe fn downcast_mut_unchecked<T: 'static>(&mut self) -> &mut T {
-                // Get the raw representation of the trait object
-                let to: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-
-                // Extract the data pointer
-                ::$core::mem::transmute(to.data)
+            pub unsafe fn downcast_mut_unchecked<T: $trait_>
+                                                (&mut self) -> &mut T {
+                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                ::$core::mem::transmute(trait_object.data)
             }
         }
     };
 
     // Not using libstd? You can get the Box<Any> methods by specifying what liballoc is here,
     // e.g. `mopafy!(Trait, alloc = alloc)`
-    ($trait_:ty, core = $core:ident, alloc = $alloc:ident) => {
+    ($trait_:ident, core = $core:ident, alloc = $alloc:ident) => {
         mopafy!($trait_, core = $core);
 
         impl $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
-            pub fn downcast<T: 'static>(self: ::$alloc::boxed::Box<Self>)
+            pub fn downcast<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$core::result::Result<::$alloc::boxed::Box<T>,
                                                ::$alloc::boxed::Box<Self>> {
                 if self.is::<T>() {
@@ -293,13 +280,10 @@ macro_rules! mopafy {
             /// Returns the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
-            pub unsafe fn downcast_unchecked<T: 'static>(self: ::$alloc::boxed::Box<Self>)
+            pub unsafe fn downcast_unchecked<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$alloc::boxed::Box<T> {
-                // Get the raw representation of the trait object
-                let to: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-
-                // Extract the data pointer
-                ::$core::mem::transmute(to.data)
+                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                ::$core::mem::transmute(trait_object.data)
             }
         }
     };
