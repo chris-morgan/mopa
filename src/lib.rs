@@ -13,6 +13,8 @@
 //
 // I have kept my additions under the same terms (being rather fond of MIT/Apache-2.0 myself).
 
+#![cfg_attr(test, feature(core))]
+
 //! **MOPA: My Own Personal Any.** A macro to implement all the `Any` methods on your own trait.
 //!
 //! You like `Any`—its ability to store any `'static` type as a trait object and then downcast it
@@ -208,7 +210,7 @@ macro_rules! mopafy {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
             pub fn is<T: $trait_>(&self) -> bool {
-                ::$core::any::TypeId::of::<T>() == ::$core::any::TypeId::of::<Self>()
+                ::$core::any::TypeId::of::<T>() == self.get_type_id()
             }
 
             /// Returns some reference to the boxed value if it is of type `T`, or
@@ -287,4 +289,85 @@ macro_rules! mopafy {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::Any;
+
+    trait Person: Any {
+        fn weight(&self) -> i16;
+    }
+
+    mopafy!(Person);
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct Benny {
+        // (Benny is not a superhero. He can’t carry more than 256kg of food at once.)
+        kilograms_of_food: u8,
+    }
+
+    impl Person for Benny {
+        fn weight(&self) -> i16 {
+            self.kilograms_of_food as i16 + 60
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct Chris;
+
+    impl Person for Chris {
+        fn weight(&self) -> i16 { -5 /* antigravity device! cool! */ }
+    }
+
+    #[test]
+    fn test_ref() {
+        let benny = Benny { kilograms_of_food: 13 };
+        let benny_ptr: *const Benny = &benny;
+        let person: &Person = &benny;
+
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>().map(|x| x as *const Benny), Some(benny_ptr));
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() as *const Benny }, benny_ptr);
+
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+    }
+
+    #[test]
+    fn test_mut() {
+        let mut benny = Benny { kilograms_of_food: 13 };
+        let benny_ptr: *const Benny = &benny;
+        let person: &mut Person = &mut benny;
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>().map(|x| x as *const Benny), Some(benny_ptr));
+        assert_eq!(person.downcast_mut::<Benny>().map(|x| &*x as *const Benny), Some(benny_ptr));
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() as *const Benny }, benny_ptr);
+        assert_eq!(unsafe { &*person.downcast_mut_unchecked::<Benny>() as *const Benny }, benny_ptr);
+
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+        assert_eq!(person.downcast_mut::<Chris>(), None);
+    }
+
+    #[test]
+    fn test_box() {
+        let mut benny = Benny { kilograms_of_food: 13 };
+        let mut person: Box<Person> = Box::new(benny.clone());
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
+        assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
+        assert_eq!(person.downcast::<Benny>().map(|x| *x).ok(), Some(benny.clone()));
+
+        person = Box::new(benny.clone());
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() }, &benny);
+        assert_eq!(unsafe { person.downcast_mut_unchecked::<Benny>() }, &mut benny);
+        assert_eq!(unsafe { *person.downcast_unchecked::<Benny>() }, benny);
+
+        person = Box::new(benny.clone());
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+        assert_eq!(person.downcast_mut::<Chris>(), None);
+        assert!(person.downcast::<Chris>().err().is_some());
+    }
 }
