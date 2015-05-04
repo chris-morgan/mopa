@@ -147,7 +147,7 @@ pub trait Any : std::any::Any {
 impl<T: std::any::Any> Any for T {}
 
 #[cfg(no_std)]
-pub trait CoreAny : std::any::Any {
+pub trait CoreAny : core::any::Any {
     /// Get the `TypeId` of this object.
     #[inline(always)]
     fn get_type(&self) -> core::any::TypeId { 
