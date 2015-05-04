@@ -27,11 +27,11 @@ it. Fortunately now you can *mopafy* `Person` in three simple steps:
 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
 
    ```rust,ignore
-   #[macro_use] #[no_link]
+   #[macro_use]
    extern crate mopa;
    ```
 
-2. Make `Any` a supertrait of `Person`;
+2. Make `mopa::Any` a supertrait of `Person`;
 
 3. `mopafy!(Person);`.
 
@@ -42,10 +42,10 @@ Oh, by the way, it was actually the person on the bear’s plate. There wasn’t
 `Person`’s plate after all.
 
 ```rust
-#[macro_use] #[no_link]
+#[macro_use]
 extern crate mopa;
 
-use std::any::Any;
+use mopa::Any;
 
 struct Bear {
     // This might be a pretty fat bear.
@@ -58,7 +58,7 @@ impl Bear {
     }
 }
 
-trait Person: Any {
+trait Person : Any {
     fn panic(&self);
     fn yell(&self) { println!("Argh!"); }
     fn sleep(&self);
