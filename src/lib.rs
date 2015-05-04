@@ -136,6 +136,7 @@
 
 /// Universal mixin trait for adding a `get_type` method.
 ///
+#[cfg(not(feature = "no_std"))]
 pub trait Any : std::any::Any {
     /// Get the `TypeId` of this object.
     #[inline(always)]
@@ -144,10 +145,13 @@ pub trait Any : std::any::Any {
     }
 }
 
+#[cfg(not(feature = "no_std"))]
 impl<T: std::any::Any> Any for T {}
 
-#[cfg(no_std)]
-pub trait CoreAny : core::any::Any {
+/// Universal mixin trait for adding a `get_type` method.
+///
+#[cfg(feature = "no_std")]
+pub trait Any : core::any::Any {
     /// Get the `TypeId` of this object.
     #[inline(always)]
     fn get_type(&self) -> core::any::TypeId { 
@@ -155,8 +159,8 @@ pub trait CoreAny : core::any::Any {
     }
 }
 
-#[cfg(no_std)]
-impl<T: core::any::Any> CoreAny for T {}
+#[cfg(feature = "no_std")]
+impl<T: core::any::Any> Any for T {}
 
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
@@ -190,8 +194,8 @@ impl<T: core::any::Any> CoreAny for T {}
 ///    #![feature(core)]
 ///    #[macro_use] extern crate mopa;
 ///    extern crate core;
-///    use mopa::CoreAny;
-///    trait Trait: CoreAny { }
+///    use mopa::Any;
+///    trait Trait : Any { }
 ///    mopafy!(Trait, core = core);
 ///    # fn main() { }
 ///    ```
@@ -208,8 +212,8 @@ impl<T: core::any::Any> CoreAny for T {}
 ///    #[macro_use] extern crate mopa;
 ///    extern crate core;
 ///    extern crate alloc;
-///    use mopa::CoreAny;
-///    trait Trait: CoreAny { }
+///    use mopa::Any;
+///    trait Trait : Any { }
 ///    mopafy!(Trait, core = core, alloc = alloc);
 ///    # fn main() { }
 ///    ```
