@@ -13,8 +13,6 @@
 //
 // I have kept my additions under the same terms (being rather fond of MIT/Apache-2.0 myself).
 
-#![cfg_attr(test, feature(core))]
-
 //! **MOPA: My Own Personal Any.** A macro to implement all the `Any` methods on your own trait.
 //!
 //! You like `Any`—its ability to store any `'static` type as a trait object and then downcast it
@@ -36,12 +34,12 @@
 //!
 //! 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
 //!
-//!    ```rust,ignore
-//!    #[macro_use] #[no_link]
+//!    ```ignore
+//!    #[macro_use]
 //!    extern crate mopa;
 //!    ```
 //!
-//! 2. Make `Any` a supertrait of `Person`;
+//! 2. Make `mopa::Any` a supertrait of `Person`;
 //!
 //! 3. `mopafy!(Person);`.
 //!
@@ -51,12 +49,11 @@
 //! Oh, by the way, it was actually the person on the bear’s plate. There wasn’t really anything on
 //! `Person`’s plate after all.
 //!
-//! ```rust
-//! #![feature(core)]
-//! #[macro_use] #[no_link]
+//! ```
+//! #[macro_use]
 //! extern crate mopa;
 //!
-//! use std::any::Any;
+//! use mopa::Any;
 //!
 //! struct Bear {
 //!     // This might be a pretty fat bear.
@@ -69,7 +66,7 @@
 //!     }
 //! }
 //!
-//! trait Person: Any {
+//! trait Person : Any {
 //!     fn panic(&self);
 //!     fn yell(&self) { println!("Argh!"); }
 //!     fn sleep(&self);
@@ -137,11 +134,39 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
+/// Universal mixin trait for adding a `get_type` method.
+///
+#[cfg(not(feature = "no_std"))]
+pub trait Any : std::any::Any {
+    /// Get the `TypeId` of this object.
+    #[inline(always)]
+    fn get_type(&self) -> std::any::TypeId { 
+        std::any::TypeId::of::<Self>() 
+    }
+}
+
+#[cfg(not(feature = "no_std"))]
+impl<T: std::any::Any> Any for T {}
+
+/// Universal mixin trait for adding a `get_type` method.
+///
+#[cfg(feature = "no_std")]
+pub trait Any : core::any::Any {
+    /// Get the `TypeId` of this object.
+    #[inline(always)]
+    fn get_type(&self) -> core::any::TypeId { 
+        core::any::TypeId::of::<Self>() 
+    }
+}
+
+#[cfg(feature = "no_std")]
+impl<T: core::any::Any> Any for T {}
+
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
 /// # Instructions for use
 ///
-/// 1. Make sure your trait extends `Any` (e.g. `trait Trait: Any { }`)
+/// 1. Make sure your trait extends `mopa::Any` (e.g. `trait Trait : mopa::Any { }`)
 ///
 /// 2. Mopafy your trait (see the next subsection for specifics).
 ///
@@ -155,21 +180,22 @@
 ///
 /// 1. If you are a **normal person**:
 ///
-///    ```rust
-///    # #![feature(core)]
-///    # #[macro_use] #[no_link] extern crate mopa;
-///    # trait Trait: std::any::Any { }
+///    ```
+///    #[macro_use] extern crate mopa;
+///    use mopa::Any;
+///    trait Trait : Any { }
 ///    mopafy!(Trait);
 ///    # fn main() { }
 ///    ```
 ///
 /// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc:
 ///
-///    ```rust
-///    # #![feature(core)]
-///    # #[macro_use] #[no_link] extern crate mopa;
-///    # extern crate core;
-///    # trait Trait: core::any::Any { }
+///    ```ignore
+///    #![feature(core)]
+///    #[macro_use] extern crate mopa;
+///    extern crate core;
+///    use mopa::Any;
+///    trait Trait : Any { }
 ///    mopafy!(Trait, core = core);
 ///    # fn main() { }
 ///    ```
@@ -181,12 +207,13 @@
 ///
 /// 3. If you are using **libcore and liballoc** but not libstd (`#![nostd]`):
 ///
-///    ```rust
-///    # #![feature(core, alloc)]
-///    # #[macro_use] #[no_link] extern crate mopa;
-///    # extern crate core;
-///    # extern crate alloc;
-///    # trait Trait: core::any::Any { }
+///    ```ignore
+///    #![feature(core)]
+///    #[macro_use] extern crate mopa;
+///    extern crate core;
+///    extern crate alloc;
+///    use mopa::Any;
+///    trait Trait : Any { }
 ///    mopafy!(Trait, core = core, alloc = alloc);
 ///    # fn main() { }
 ///    ```
@@ -210,7 +237,7 @@ macro_rules! mopafy {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
             pub fn is<T: $trait_>(&self) -> bool {
-                ::$core::any::TypeId::of::<T>() == self.get_type_id()
+                ::$core::any::TypeId::of::<T>() == self.get_type()
             }
 
             /// Returns some reference to the boxed value if it is of type `T`, or
@@ -231,8 +258,8 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_ref_unchecked<T: $trait_>
                                                 (&self) -> &T {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
+                let trait_object = $trait_::data(self);
+                ::$core::mem::transmute(trait_object)
             }
 
             /// Returns some mutable reference to the boxed value if it is of type `T`, or
@@ -253,8 +280,24 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_mut_unchecked<T: $trait_>
                                                 (&mut self) -> &mut T {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
+                let trait_object = $trait_::data_mut(self);
+                ::$core::mem::transmute(trait_object)
+            }
+
+            /// Get the data pointer from this trait object.
+            ///
+            /// Highly unsafe, as there is no information about the type of the data.
+            #[inline]
+            unsafe fn data<T: ?Sized>(val: *const T) -> *const () {
+                *::$core::mem::transmute::<*const *const T, *const *const ()>(&val)
+            }
+
+            /// Get the data pointer from this trait object, mutably.
+            ///
+            /// Highly unsafe, as there is no information about the type of the data.
+            #[inline]
+            unsafe fn data_mut<T: ?Sized>(mut val: *mut T) -> *mut () {
+                *::$core::mem::transmute::<*mut *mut T, *mut *mut ()>(&mut val)
             }
         }
     };
@@ -284,18 +327,25 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_unchecked<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$alloc::boxed::Box<T> {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
+                let raw = $trait_::into_raw(self);                        
+                let trait_object = $trait_::data(raw);
+                ::$core::mem::transmute(trait_object)
             }
+            
+            #[inline]
+            unsafe fn into_raw<T : ?Sized>(b: ::$alloc::boxed::Box<T>) -> *mut T {
+                ::$core::mem::transmute(b)
+            }
+
         }
     };
 }
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
+    use super::Any;
 
-    trait Person: Any {
+    trait Person : Any {
         fn weight(&self) -> i16;
     }
 

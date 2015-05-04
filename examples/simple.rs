@@ -1,11 +1,9 @@
-#![feature(core)]
-
-#[macro_use] #[no_link]
+#[macro_use]
 extern crate mopa;
 
-use std::any::Any;
+use mopa::Any;
 
-trait PanicAny: Any { }
+trait PanicAny : Any { }
 
 mopafy!(PanicAny);
 
