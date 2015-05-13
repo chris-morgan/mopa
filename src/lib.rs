@@ -13,8 +13,6 @@
 //
 // I have kept my additions under the same terms (being rather fond of MIT/Apache-2.0 myself).
 
-#![cfg_attr(test, feature(core))]
-
 //! **MOPA: My Own Personal Any.** A macro to implement all the `Any` methods on your own trait.
 //!
 //! You like `Any`—its ability to store any `'static` type as a trait object and then downcast it
@@ -37,11 +35,11 @@
 //! 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
 //!
 //!    ```rust,ignore
-//!    #[macro_use] #[no_link]
+//!    #[macro_use]
 //!    extern crate mopa;
 //!    ```
 //!
-//! 2. Make `Any` a supertrait of `Person`;
+//! 2. Make `Any` (`mopa::Any`, not `std::any::Any`) a supertrait of `Person`;
 //!
 //! 3. `mopafy!(Person);`.
 //!
@@ -52,11 +50,8 @@
 //! `Person`’s plate after all.
 //!
 //! ```rust
-//! #![feature(core)]
-//! #[macro_use] #[no_link]
+//! #[macro_use]
 //! extern crate mopa;
-//!
-//! use std::any::Any;
 //!
 //! struct Bear {
 //!     // This might be a pretty fat bear.
@@ -69,7 +64,7 @@
 //!     }
 //! }
 //!
-//! trait Person: Any {
+//! trait Person: mopa::Any {
 //!     fn panic(&self);
 //!     fn yell(&self) { println!("Argh!"); }
 //!     fn sleep(&self);
@@ -137,11 +132,57 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
+#![cfg_attr(feature = "no_std", feature(core, no_std))]
+#![cfg_attr(feature = "no_std", no_std)]
+
+#[cfg(feature = "no_std")]
+#[macro_use]
+extern crate core;
+
+#[cfg(all(test, feature = "no_std"))]
+extern crate std;
+
+#[cfg(not(feature = "no_std"))]
+extern crate std as core;
+
+use core::any::Any as StdAny;
+use core::any::TypeId;
+
+/// A type to emulate dynamic typing.
+///
+/// This is a simple wrapper around `std::any::Any` which exists for technical reasons.
+/// Every type that implements `std::any::Any` implements this `Any`.
+///
+/// See the [`std::any::Any` documentation](http://doc.rust-lang.org/std/any/trait.Any.html) for
+/// more details.
+///
+/// Any traits to be mopafied must extend this trait.
+pub trait Any: StdAny {
+    /// Gets the `TypeId` of `self`.
+    #[doc(hidden)]
+    fn get_type_id(&self) -> TypeId;
+}
+
+impl<T: StdAny> Any for T {
+    fn get_type_id(&self) -> TypeId { TypeId::of::<T>() }
+}
+
+// Not using core::any::TraitObject, even if feature = "unstable", because of its feature(core)
+// dependency. It’d be possible to arrange, but it’d require the macro user to add feature(core).
+#[repr(C)]
+#[allow(raw_pointer_derive)]
+#[derive(Copy, Clone)]
+#[doc(hidden)]
+pub struct TraitObject {
+    pub data: *mut (),
+    pub vtable: *mut (),
+}
+
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
 /// # Instructions for use
 ///
-/// 1. Make sure your trait extends `Any` (e.g. `trait Trait: Any { }`)
+/// 1. Make sure your trait extends `mopa::Any` (e.g. `trait Trait: mopa::Any { }`)
 ///
 /// 2. Mopafy your trait (see the next subsection for specifics).
 ///
@@ -156,20 +197,20 @@
 /// 1. If you are a **normal person**:
 ///
 ///    ```rust
-///    # #![feature(core)]
-///    # #[macro_use] #[no_link] extern crate mopa;
-///    # trait Trait: std::any::Any { }
+///    # #[macro_use] extern crate mopa;
+///    trait Trait: mopa::Any { }
 ///    mopafy!(Trait);
 ///    # fn main() { }
 ///    ```
 ///
-/// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc:
+/// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc, enable the `no_std`
+///    Cargo feature and write this:
 ///
 ///    ```rust
 ///    # #![feature(core)]
-///    # #[macro_use] #[no_link] extern crate mopa;
+///    # #[macro_use] extern crate mopa;
 ///    # extern crate core;
-///    # trait Trait: core::any::Any { }
+///    # trait Trait: mopa::Any { }
 ///    mopafy!(Trait, core = core);
 ///    # fn main() { }
 ///    ```
@@ -179,14 +220,15 @@
 ///    Unlike the other two techniques, this only gets you the `&Any` and `&mut Any` methods; the
 ///    `Box<Any>` methods require liballoc.
 ///
-/// 3. If you are using **libcore and liballoc** but not libstd (`#![nostd]`):
+/// 3. If you are using **libcore and liballoc** but not libstd (`#![no_std]`), enable the `no_std`
+///    Cargo feature and write this:
 ///
 ///    ```rust
 ///    # #![feature(core, alloc)]
-///    # #[macro_use] #[no_link] extern crate mopa;
+///    # #[macro_use] extern crate mopa;
 ///    # extern crate core;
 ///    # extern crate alloc;
-///    # trait Trait: core::any::Any { }
+///    # trait Trait: mopa::Any { }
 ///    mopafy!(Trait, core = core, alloc = alloc);
 ///    # fn main() { }
 ///    ```
@@ -210,7 +252,7 @@ macro_rules! mopafy {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
             pub fn is<T: $trait_>(&self) -> bool {
-                ::$core::any::TypeId::of::<T>() == self.get_type_id()
+                ::$core::any::TypeId::of::<T>() == $crate::Any::get_type_id(self)
             }
 
             /// Returns some reference to the boxed value if it is of type `T`, or
@@ -231,7 +273,7 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_ref_unchecked<T: $trait_>
                                                 (&self) -> &T {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
                 ::$core::mem::transmute(trait_object.data)
             }
 
@@ -253,7 +295,7 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_mut_unchecked<T: $trait_>
                                                 (&mut self) -> &mut T {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
                 ::$core::mem::transmute(trait_object.data)
             }
         }
@@ -284,7 +326,7 @@ macro_rules! mopafy {
             #[inline]
             pub unsafe fn downcast_unchecked<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
                     -> ::$alloc::boxed::Box<T> {
-                let trait_object: ::$core::raw::TraitObject = ::$core::mem::transmute(self);
+                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
                 ::$core::mem::transmute(trait_object.data)
             }
         }
@@ -293,9 +335,9 @@ macro_rules! mopafy {
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
+    use std::prelude::v1::*;
 
-    trait Person: Any {
+    trait Person: super::Any {
         fn weight(&self) -> i16;
     }
 

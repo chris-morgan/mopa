@@ -1,6 +1,6 @@
 [package]
 name = "mopa"
-version = "0.1.8"
+version = "0.2.0"
 authors = ["Chris Morgan <me@chrismorgan.info>"]
 description = "My Own Personal Any: get your own Any with additional functionality"
 #documentation = 
@@ -9,3 +9,6 @@ repository = "https://github.com/chris-morgan/mopa"
 readme = "README.md"
 keywords = ["any", "macro"]
 license = "MIT/Apache-2.0"
+
+[features]
+no_std = []

@@ -1,11 +1,14 @@
 language: rust
+rust:
+  - nightly
+  - beta
 #env:
 #  global:
 #    - secure: TODO
-#script:
-#  - cargo build --verbose
-#  - cargo test --verbose
-#  - cargo doc --verbose
+script:
+  - if [[ "$(rustc --version)" =~ -(dev|nightly) ]]; then cargo test --features no_std; else ! cargo test --features no_std; fi
+  - cargo test
+#  - cargo doc
 #after_script:
 #  - ln -s target/doc doc
 #  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
