@@ -206,7 +206,7 @@ pub struct TraitObject {
 /// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc, enable the `no_std`
 ///    Cargo feature and write this:
 ///
-///    ```rust
+///    ```rust,ignore
 ///    # #![feature(core)]
 ///    # #[macro_use] extern crate mopa;
 ///    # extern crate core;
@@ -223,7 +223,7 @@ pub struct TraitObject {
 /// 3. If you are using **libcore and liballoc** but not libstd (`#![no_std]`), enable the `no_std`
 ///    Cargo feature and write this:
 ///
-///    ```rust
+///    ```rust,ignore
 ///    # #![feature(core, alloc)]
 ///    # #[macro_use] extern crate mopa;
 ///    # extern crate core;
