@@ -4,7 +4,7 @@
 // cfg-gating is a workaround for Cargo until https://github.com/rust-lang/cargo/issues/1570 lands.
 // Do not include it if you copy any code.
 
-#![cfg_attr(feature = "no_std", feature(lang_items, start, core, alloc, no_std))]
+#![cfg_attr(feature = "no_std", feature(lang_items, start, alloc))]
 #![cfg_attr(feature = "no_std", no_std)]
 
 #[cfg(not(feature = "no_std"))]
@@ -14,8 +14,6 @@ fn main() { }
 #[macro_use]
 extern crate mopa;
 
-#[cfg(feature = "no_std")]
-extern crate core;
 #[cfg(feature = "no_std")]
 extern crate alloc;
 

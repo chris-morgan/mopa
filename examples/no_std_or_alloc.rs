@@ -5,7 +5,7 @@
 // Do not include it if you copy any code.
 
 
-#![cfg_attr(feature = "no_std", feature(lang_items, start, core, libc, no_std))]
+#![cfg_attr(feature = "no_std", feature(lang_items, start, libc))]
 #![cfg_attr(feature = "no_std", no_std)]
 
 #[cfg(not(feature = "no_std"))]
@@ -15,8 +15,6 @@ fn main() { }
 #[macro_use]
 extern crate mopa;
 
-#[cfg(feature = "no_std")]
-extern crate core;
 #[cfg(feature = "no_std")]
 extern crate libc;
 

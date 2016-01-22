@@ -132,12 +132,7 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![cfg_attr(feature = "no_std", feature(core, no_std))]
 #![cfg_attr(feature = "no_std", no_std)]
-
-#[cfg(feature = "no_std")]
-#[macro_use]
-extern crate core;
 
 #[cfg(all(test, feature = "no_std"))]
 extern crate std;
@@ -170,7 +165,6 @@ impl<T: StdAny> Any for T {
 // Not using core::any::TraitObject, even if feature = "unstable", because of its feature(core)
 // dependency. It’d be possible to arrange, but it’d require the macro user to add feature(core).
 #[repr(C)]
-#[allow(raw_pointer_derive)]
 #[derive(Copy, Clone)]
 #[doc(hidden)]
 pub struct TraitObject {
