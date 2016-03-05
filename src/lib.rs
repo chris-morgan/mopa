@@ -242,6 +242,7 @@ macro_rules! mopafy {
     // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
     // methods.
     ($trait_:ident, core = $core:ident) => {
+        #[allow(dead_code)]
         impl $trait_ {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
@@ -300,6 +301,7 @@ macro_rules! mopafy {
     ($trait_:ident, core = $core:ident, alloc = $alloc:ident) => {
         mopafy!($trait_, core = $core);
 
+        #[allow(dead_code)]
         impl $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
