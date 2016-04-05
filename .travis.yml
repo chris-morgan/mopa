@@ -7,7 +7,8 @@ rust:
 #  global:
 #    - secure: TODO
 script:
-  - if [[ "$(rustc --version)" =~ -(dev|nightly) ]]; then cargo test --features no_std; else ! cargo test --features no_std; fi
+  - if [[ "$(rustc --version)" =~ -(dev|nightly) ]]; then cargo test --features no_std_examples; else ! cargo test --features no_std_examples; fi
+  - cargo test --features no_std
   - cargo test
 #  - cargo doc
 #after_script:

@@ -1,23 +1,24 @@
-// This example depends on the no_std feature being enabled on the crate;
+// This example depends on the no_std_examples feature being enabled on the crate;
 // without it, we have to go and chop everything off so that it can compile.
-// If you are basing something off this example, please note that all the `feature = "no_std"`
+// If you are basing something off this example, please note that all the `feature =
+// "no_std_examples"`
 // cfg-gating is a workaround for Cargo until https://github.com/rust-lang/cargo/issues/1570 lands.
 // Do not include it if you copy any code.
 
-#![cfg_attr(feature = "no_std", feature(lang_items, start, alloc))]
-#![cfg_attr(feature = "no_std", no_std)]
+#![cfg_attr(feature = "no_std_examples", feature(lang_items, start, alloc))]
+#![cfg_attr(feature = "no_std_examples", no_std)]
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(not(feature = "no_std_examples"))]
 fn main() { }
 
-#[cfg(feature = "no_std")]
+#[cfg(feature = "no_std_examples")]
 #[macro_use]
 extern crate mopa;
 
-#[cfg(feature = "no_std")]
+#[cfg(feature = "no_std_examples")]
 extern crate alloc;
 
-#[cfg(feature = "no_std")]
+#[cfg(feature = "no_std_examples")]
 mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
     trait Panic { fn panic(&self) { } }
 
