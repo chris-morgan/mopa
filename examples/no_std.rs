@@ -39,7 +39,6 @@ mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
         }
     }
 
-    #[lang = "stack_exhausted"] extern fn stack_exhausted() {}
     #[lang = "eh_personality"] extern fn eh_personality() {}
     #[lang = "panic_fmt"] extern fn panic_fmt() {}
 }
