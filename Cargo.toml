@@ -11,5 +11,4 @@ keywords = ["any", "macro"]
 license = "MIT/Apache-2.0"
 
 [features]
-no_std = []
-no_std_examples = ["no_std"]
+no_std_examples = []

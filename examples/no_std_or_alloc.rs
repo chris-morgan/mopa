@@ -5,7 +5,6 @@
 // cfg-gating is a workaround for Cargo until https://github.com/rust-lang/cargo/issues/1570 lands.
 // Do not include it if you copy any code.
 
-
 #![cfg_attr(feature = "no_std_examples", feature(lang_items, start, libc))]
 #![cfg_attr(feature = "no_std_examples", no_std)]
 
@@ -25,7 +24,7 @@ mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
 
     trait PanicAny: Panic + ::mopa::Any { }
 
-    mopafy!(PanicAny, core = core);
+    mopafy!(PanicAny, only core);
 
     impl Panic for i32 { }
 

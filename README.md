@@ -1,11 +1,11 @@
-mopa 0.2.2
-==========
+MOPA: My Own Personal Any
+=========================
 
 [![Build Status](https://travis-ci.org/chris-morgan/mopa.svg?branch=master)](https://travis-ci.org/chris-morgan/mopa)
 
 <!-- The rest of this section comes straight from the crate docs from the source. -->
 
-**MOPA: My Own Personal Any.** A macro to implement all the `Any` methods on your own trait.
+A macro to implement all the `Any` methods on your own trait.
 
 You like `Any`—its ability to store any `'static` type as a trait object and then downcast it
 back to the original type is very convenient, and in fact you need it for whatever misguided
@@ -26,7 +26,7 @@ it. Fortunately now you can *mopafy* `Person` in three simple steps:
 
 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
 
-   ```rust,ignore
+   ```rust
    #[macro_use]
    extern crate mopa;
    ```
@@ -118,7 +118,7 @@ fn main() {
 
 Now *should* you do something like this? Probably not. Enums are probably a better solution for
 this particular case as written; frankly I believe that almost the only time you should
-downcast an Any trait object (or a mopafied trait object) is with a generic parameter, when
+downcast an `Any` trait object (or a mopafied trait object) is with a generic parameter, when
 producing something like `AnyMap`, for example. If you control *all* the code, `Any` trait
 objects are probably not the right solution; they’re good for cases with user-defined
 types across a variety of libraries. But the question of purpose and suitability is open, and I
@@ -132,7 +132,7 @@ Cargo all the way. http://crates.io/crates/mopa
 Author
 ------
 
-[Chris Morgan](http://chrismorgan.info/) ([chris-morgan](https://github.com/chris-morgan)) is the primary author and maintainer of this library.
+[Chris Morgan](https://chrismorgan.info/) ([chris-morgan](https://github.com/chris-morgan)) is the primary author and maintainer of this library.
 
 License
 -------

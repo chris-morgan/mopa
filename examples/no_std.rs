@@ -20,11 +20,13 @@ extern crate alloc;
 
 #[cfg(feature = "no_std_examples")]
 mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
+    use alloc::boxed::Box;
+
     trait Panic { fn panic(&self) { } }
 
     trait PanicAny: Panic + ::mopa::Any { }
 
-    mopafy!(PanicAny, core = core, alloc = alloc);
+    mopafy!(PanicAny);
 
     impl Panic for i32 { }
 

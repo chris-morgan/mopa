@@ -34,9 +34,10 @@
 //!
 //! 1. Add the `mopa` crate to your `Cargo.toml` as usual and your crate root like so:
 //!
-//!    ```rust,ignore
+//!    ```rust
 //!    #[macro_use]
 //!    extern crate mopa;
+//!    # fn main() { }
 //!    ```
 //!
 //! 2. Make `Any` (`mopa::Any`, not `std::any::Any`) a supertrait of `Person`;
@@ -126,22 +127,32 @@
 //!
 //! Now *should* you do something like this? Probably not. Enums are probably a better solution for
 //! this particular case as written; frankly I believe that almost the only time you should
-//! downcast an Any trait object (or a mopafied trait object) is with a generic parameter, when
+//! downcast an `Any` trait object (or a mopafied trait object) is with a generic parameter, when
 //! producing something like `AnyMap`, for example. If you control *all* the code, `Any` trait
 //! objects are probably not the right solution; they’re good for cases with user-defined
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![cfg_attr(feature = "no_std", no_std)]
+#![no_std]
 
-#[cfg(all(test, feature = "no_std"))]
+#[cfg(test)]
+#[macro_use]
 extern crate std;
-
-#[cfg(not(feature = "no_std"))]
-extern crate std as core;
 
 use core::any::Any as StdAny;
 use core::any::TypeId;
+
+/// Implementation details of the `mopafy!` macro.
+#[doc(hidden)]
+pub mod __ {
+    pub use core::any::TypeId;
+    pub use core::mem::transmute;
+    // Option and Result are in the prelude, but they might have been overridden in the macro’s
+    // scope, so we do it this way to avoid issues. (Result in particular gets overridden fairly
+    // often.)
+    pub use core::option::Option;
+    pub use core::result::Result;
+}
 
 /// A type to emulate dynamic typing.
 ///
@@ -162,8 +173,8 @@ impl<T: StdAny> Any for T {
     fn get_type_id(&self) -> TypeId { TypeId::of::<T>() }
 }
 
-// Not using core::any::TraitObject, even if feature = "unstable", because of its feature(core)
-// dependency. It’d be possible to arrange, but it’d require the macro user to add feature(core).
+// Not using core::raw::TraitObject, even if feature = "unstable", because of its feature(raw)
+// dependency. It’d be possible to arrange, but it’d require the macro user to add feature(raw).
 #[repr(C)]
 #[derive(Copy, Clone)]
 #[doc(hidden)]
@@ -197,133 +208,116 @@ pub struct TraitObject {
 ///    # fn main() { }
 ///    ```
 ///
-/// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc, enable the `no_std`
-///    Cargo feature and write this:
+/// 2. If you are using **libcore** but not libstd (`#![no_std]`) or liballoc, write this:
 ///
-///    ```rust,ignore
-///    # #![feature(core)]
+///    ```rust
 ///    # #[macro_use] extern crate mopa;
-///    # extern crate core;
 ///    # trait Trait: mopa::Any { }
-///    mopafy!(Trait, core = core);
+///    mopafy!(Trait, only core);
 ///    # fn main() { }
 ///    ```
-///
-///    (This is akin to `mopafy!(Trait, core = std)` if you were using libstd.)
 ///
 ///    Unlike the other two techniques, this only gets you the `&Any` and `&mut Any` methods; the
 ///    `Box<Any>` methods require liballoc.
 ///
-/// 3. If you are using **libcore and liballoc** but not libstd (`#![no_std]`), enable the `no_std`
-///    Cargo feature and write this:
+/// 3. If you are using **libcore and liballoc** but not libstd (`#![no_std]`), bring
+///    `alloc::boxed::Box` into scope and use `mopafy!` as usual:
 ///
 ///    ```rust,ignore
-///    # #![feature(core, alloc)]
+///    # // This doctest is ignored so that it doesn't break tests on the stable/beta rustc
+///    # // channels where #[feature] isn’t allowed.
+///    # #![feature(alloc)]
 ///    # #[macro_use] extern crate mopa;
-///    # extern crate core;
 ///    # extern crate alloc;
 ///    # trait Trait: mopa::Any { }
-///    mopafy!(Trait, core = core, alloc = alloc);
+///    use alloc::boxed::Box;
+///    mopafy!(Trait);
 ///    # fn main() { }
 ///    ```
-///
-///    (This is akin to `mopafy!(Trait, core = std, alloc = std)` if you were using libstd; in
-///    fact, the first form is just sugar for this very thing.)
-///
-///    This gets you all the methods.
 #[macro_export]
 macro_rules! mopafy {
-    // Using libstd like a normal person? Here’s what you want, just a simple `mopafy!(Trait)`.
+    // Implement the full suite of `Any` methods: those of `&Any`, `&mut Any` and `Box<Any>`.
+    //
+    // If you’re not using libstd, you’ll need to `use alloc::boxed::Box;`, or forego the
+    // `Box<Any>` methods by just using `mopafy!(Trait, only core);`.
     ($trait_:ident) => {
-        mopafy!($trait_, core = std, alloc = std);
-    };
-
-    // Not using libstd or liballoc? You can get the &Any and &mut Any methods by specifying what
-    // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
-    // methods.
-    ($trait_:ident, core = $core:ident) => {
-        #[allow(dead_code)]
-        impl $trait_ {
-            /// Returns true if the boxed type is the same as `T`
-            #[inline]
-            pub fn is<T: $trait_>(&self) -> bool {
-                ::$core::any::TypeId::of::<T>() == $crate::Any::get_type_id(self)
-            }
-
-            /// Returns some reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_ref<T: $trait_>(&self) -> ::$core::option::Option<&T> {
-                if self.is::<T>() {
-                    unsafe {
-                        ::$core::option::Option::Some(self.downcast_ref_unchecked())
-                    }
-                } else {
-                    ::$core::option::Option::None
-                }
-            }
-
-            /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_ref_unchecked<T: $trait_>
-                                                (&self) -> &T {
-                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
-            }
-
-            /// Returns some mutable reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_mut<T: $trait_>(&mut self) -> ::$core::option::Option<&mut T> {
-                if self.is::<T>() {
-                    unsafe {
-                        ::$core::option::Option::Some(self.downcast_mut_unchecked())
-                    }
-                } else {
-                    ::$core::option::Option::None
-                }
-            }
-
-            /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_mut_unchecked<T: $trait_>
-                                                (&mut self) -> &mut T {
-                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
-            }
-        }
-    };
-
-    // Not using libstd? You can get the Box<Any> methods by specifying what liballoc is here,
-    // e.g. `mopafy!(Trait, alloc = alloc)`
-    ($trait_:ident, core = $core:ident, alloc = $alloc:ident) => {
-        mopafy!($trait_, core = $core);
+        mopafy!($trait_, only core);
 
         #[allow(dead_code)]
         impl $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
-            pub fn downcast<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
-                    -> ::$core::result::Result<::$alloc::boxed::Box<T>,
-                                               ::$alloc::boxed::Box<Self>> {
+            pub fn downcast<T: $trait_>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
                 if self.is::<T>() {
                     unsafe {
-                        ::$core::result::Result::Ok(self.downcast_unchecked())
+                        $crate::__::Result::Ok(self.downcast_unchecked())
                     }
                 } else {
-                    ::$core::result::Result::Err(self)
+                    $crate::__::Result::Err(self)
                 }
             }
 
             /// Returns the boxed value, blindly assuming it to be of type `T`.
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
-            pub unsafe fn downcast_unchecked<T: $trait_>(self: ::$alloc::boxed::Box<Self>)
-                    -> ::$alloc::boxed::Box<T> {
-                let trait_object: $crate::TraitObject = ::$core::mem::transmute(self);
-                ::$core::mem::transmute(trait_object.data)
+            pub unsafe fn downcast_unchecked<T: $trait_>(self: Box<Self>) -> Box<T> {
+                let trait_object: $crate::TraitObject = $crate::__::transmute(self);
+                $crate::__::transmute(trait_object.data)
+            }
+        }
+    };
+
+    // Not using libstd/liballoc? The core functionality can do without them; you will still have
+    // the `&Any` and `&mut Any` methods but will lose the `Box<Any>` methods.
+    ($trait_:ident, only core) => {
+        #[allow(dead_code)]
+        impl $trait_ {
+            /// Returns true if the boxed type is the same as `T`
+            #[inline]
+            pub fn is<T: $trait_>(&self) -> bool {
+                $crate::__::TypeId::of::<T>() == $crate::Any::get_type_id(self)
+            }
+
+            /// Returns some reference to the boxed value if it is of type `T`, or
+            /// `None` if it isn't.
+            #[inline]
+            pub fn downcast_ref<T: $trait_>(&self) -> $crate::__::Option<&T> {
+                if self.is::<T>() {
+                    unsafe {
+                        $crate::__::Option::Some(self.downcast_ref_unchecked())
+                    }
+                } else {
+                    $crate::__::Option::None
+                }
+            }
+
+            /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
+            /// If you are not *absolutely certain* of `T`, you *must not* call this.
+            #[inline]
+            pub unsafe fn downcast_ref_unchecked<T: $trait_>(&self) -> &T {
+                let trait_object: $crate::TraitObject = $crate::__::transmute(self);
+                $crate::__::transmute(trait_object.data)
+            }
+
+            /// Returns some mutable reference to the boxed value if it is of type `T`, or
+            /// `None` if it isn't.
+            #[inline]
+            pub fn downcast_mut<T: $trait_>(&mut self) -> $crate::__::Option<&mut T> {
+                if self.is::<T>() {
+                    unsafe {
+                        $crate::__::Option::Some(self.downcast_mut_unchecked())
+                    }
+                } else {
+                    $crate::__::Option::None
+                }
+            }
+
+            /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
+            /// If you are not *absolutely certain* of `T`, you *must not* call this.
+            #[inline]
+            pub unsafe fn downcast_mut_unchecked<T: $trait_>(&mut self) -> &mut T {
+                let trait_object: $crate::TraitObject = $crate::__::transmute(self);
+                $crate::__::transmute(trait_object.data)
             }
         }
     };
