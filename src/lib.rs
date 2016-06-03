@@ -139,9 +139,6 @@
 #[macro_use]
 extern crate std;
 
-use core::any::Any as StdAny;
-use core::any::TypeId;
-
 /// Implementation details of the `mopafy!` macro.
 #[doc(hidden)]
 pub mod __ {
@@ -155,21 +152,28 @@ pub mod __ {
 
 /// A type to emulate dynamic typing.
 ///
-/// This is a simple wrapper around `std::any::Any` which exists for technical reasons.
-/// Every type that implements `std::any::Any` implements this `Any`.
+/// This is a simple wrapper around `core::any::Any` which exists for [technical reasons][#27745].
+/// Every type that implements `core::any::Any` implements this `Any`.
 ///
-/// See the [`std::any::Any` documentation](http://doc.rust-lang.org/std/any/trait.Any.html) for
+/// See the [`core::any::Any` documentation](http://doc.rust-lang.org/core/any/trait.Any.html) for
 /// more details.
 ///
-/// Any traits to be mopafied must extend this trait.
-pub trait Any: StdAny {
-    /// Gets the `TypeId` of `self`.
+/// Any traits to be mopafied must extend this trait (e.g. `trait Person: mopa::Any { }`).
+///
+/// If/when [#27745] is resolved, this trait may be replaced with a simple reexport of
+/// `core::any::Any`. This will be a backwards-compatible change.
+///
+/// [#27745]: https://github.com/rust-lang/rust/issues/27745
+pub trait Any: core::any::Any {
+    /// Gets the `TypeId` of `self`. UNSTABLE; do not depend on it.
     #[doc(hidden)]
-    fn get_type_id(&self) -> TypeId;
+    fn __get_type_id(&self) -> __::TypeId;
 }
 
-impl<T: StdAny> Any for T {
-    fn get_type_id(&self) -> TypeId { TypeId::of::<T>() }
+impl<T: core::any::Any> Any for T {
+    fn __get_type_id(&self) -> __::TypeId {
+        __::TypeId::of::<T>()
+    }
 }
 
 /// The macro for implementing all the `Any` methods on your own trait.
@@ -263,7 +267,7 @@ macro_rules! mopafy {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
             pub fn is<T: $trait_>(&self) -> bool {
-                $crate::__::TypeId::of::<T>() == $crate::Any::get_type_id(self)
+                $crate::__::TypeId::of::<T>() == $crate::Any::__get_type_id(self)
             }
 
             /// Returns some reference to the boxed value if it is of type `T`, or
