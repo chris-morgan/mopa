@@ -19,7 +19,7 @@ extern crate mopa;
 extern crate libc;
 
 #[cfg(feature = "no_std_examples")]
-mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
+pub mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
     trait Panic { fn panic(&self) { } }
 
     trait PanicAny: Panic + ::mopa::Any { }
@@ -42,4 +42,7 @@ mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
 
     #[lang = "eh_personality"] extern fn eh_personality() {}
     #[lang = "panic_fmt"] extern fn panic_fmt() {}
+    #[lang = "eh_unwind_resume"] extern fn eh_unwind_resume(_: *mut u8) {}
+    #[no_mangle] pub extern fn rust_eh_register_frames () {}
+    #[no_mangle] pub extern fn rust_eh_unregister_frames () {}
 }
