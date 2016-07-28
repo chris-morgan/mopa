@@ -37,6 +37,8 @@
 //!    ```rust
 //!    #[macro_use]
 //!    extern crate mopa;
+//!    #[macro_use]
+//!    extern crate parse_generics_shim;
 //!    # fn main() { }
 //!    ```
 //!
@@ -53,6 +55,8 @@
 //! ```rust
 //! #[macro_use]
 //! extern crate mopa;
+//! #[macro_use]
+//! extern crate parse_generics_shim;
 //!
 //! struct Bear {
 //!     // This might be a pretty fat bear.
@@ -320,6 +324,7 @@ macro_rules! mopafy_only_core {
 ///
 ///    ```rust
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    trait Trait: mopa::Any { }
 ///    mopafy!(Trait);
 ///    trait Params<A, B>: mopa::Any { }
@@ -331,10 +336,11 @@ macro_rules! mopafy_only_core {
 ///
 ///    ```rust
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    # trait Trait: mopa::Any { }
-///    mopafy!(Trait, only core);
+///    mopafy_only_core!(Trait);
 ///    trait Params<A, B>: mopa::Any { }
-///    mopafy!(Params<A, B>, only core);
+///    mopafy_only_core!(Params<A, B>);
 ///    # fn main() { }
 ///    ```
 ///
@@ -349,6 +355,7 @@ macro_rules! mopafy_only_core {
 ///    # // channels where #[feature] isn’t allowed.
 ///    # #![feature(alloc)]
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    # extern crate alloc;
 ///    # trait Trait: mopa::Any { }
 ///    use alloc::boxed::Box;
@@ -362,7 +369,7 @@ macro_rules! mopafy {
     // Implement the full suite of `Any` methods: those of `&Any`, `&mut Any` and `Box<Any>`.
     //
     // If you’re not using libstd, you’ll need to `use alloc::boxed::Box;`, or forego the
-    // `Box<Any>` methods by just using `mopafy!(Trait, only core);`.
+    // `Box<Any>` methods by just using `mopafy_only_core!(Trait);`.
     ($trait_:ident $($t:tt)*) => {
         mopafy_only_core!($trait_ $($t)*);
         parse_generics_shim! {
@@ -375,9 +382,9 @@ macro_rules! mopafy {
 
 #[cfg(test)]
 mod tests {
-    use std::prelude::v1::*;
     #[macro_use]
     use parse_generics_shim;
+    use std::prelude::v1::*;
 
     trait Float {}
     impl Float for f32 {}
