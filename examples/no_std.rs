@@ -16,6 +16,10 @@ fn main() { }
 extern crate mopa;
 
 #[cfg(feature = "no_std_examples")]
+#[macro_use]
+extern crate parse_generics_shim;
+
+#[cfg(feature = "no_std_examples")]
 extern crate alloc;
 
 #[cfg(feature = "no_std_examples")]

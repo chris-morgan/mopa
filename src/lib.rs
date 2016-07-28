@@ -133,7 +133,6 @@
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
 
-#![feature(trace_macros)]
 #![no_std]
 
 #[cfg(test)]
@@ -152,8 +151,6 @@ pub mod __ {
     pub use core::option::Option;
     pub use core::result::Result;
 }
-
-trace_macros!(true);
 
 /// A type to emulate dynamic typing.
 ///
@@ -181,12 +178,14 @@ impl<T: core::any::Any> Any for T {
     }
 }
 
+#[macro_export]
 macro_rules! as_item {
     ($item:item) => {
         $item
     };
 }
 
+#[macro_export]
 macro_rules! mopafy_internal {
     // Not using libstd or liballoc? You can get the &Any and &mut Any methods by specifying what
     // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
@@ -199,30 +198,33 @@ macro_rules! mopafy_internal {
             $($_fields:tt)*
         },
     ) => {
-        #[allow(dead_code)]
-        impl <$($constr)*> $trait_ <$($args)*> {
-            /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
-            #[inline]
-            pub fn downcast<T: $trait_<$($args)*>>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Result::Ok(self.downcast_unchecked())
+        as_item! {
+            #[allow(dead_code)]
+            impl <$($constr)*> $trait_ <$($args)*> {
+                /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
+                #[inline]
+                pub fn downcast<T: $trait_<$($args)*>>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Result::Ok(self.downcast_unchecked())
+                        }
+                    } else {
+                        $crate::__::Result::Err(self)
                     }
-                } else {
-                    $crate::__::Result::Err(self)
                 }
-            }
 
-            /// Returns the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_unchecked<T: $trait_<$($args)*>>(self: Box<Self>) -> Box<T> {
-                Box::from_raw(Box::into_raw(self) as *mut T)
+                /// Returns the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_unchecked<T: $trait_<$($args)*>>(self: Box<Self>) -> Box<T> {
+                    Box::from_raw(Box::into_raw(self) as *mut T)
+                }
             }
         }
     };
 }
 
+#[macro_export]
 macro_rules! mopafy_only_core_internal {
     // Not using libstd/liballoc? The core functionality can do without them; you will still have
     // the `&Any` and `&mut Any` methods but will lose the `Box<Any>` methods.
@@ -234,52 +236,54 @@ macro_rules! mopafy_only_core_internal {
             $($_fields:tt)*
         },
     ) => {
-        #[allow(dead_code)]
-        impl <$($constr)*> $trait_ <$($args)*> {
-            /// Returns true if the boxed type is the same as `T`
-            #[inline]
-            pub fn is<T: $trait_<$($args)*>>(&self) -> bool {
-                $crate::__::TypeId::of::<T>() == $crate::Any::__get_type_id(self)
-            }
-
-            /// Returns some reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_ref<T: $trait_<$($args)*>>(&self) -> $crate::__::Option<&T> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Option::Some(self.downcast_ref_unchecked())
-                    }
-                } else {
-                    $crate::__::Option::None
+        as_item! {
+            #[allow(dead_code)]
+            impl <$($constr)*> $trait_ <$($args)*> {
+                /// Returns true if the boxed type is the same as `T`
+                #[inline]
+                pub fn is<T: $trait_<$($args)*>>(&self) -> bool {
+                    $crate::__::TypeId::of::<T>() == $crate::Any::__get_type_id(self)
                 }
-            }
 
-            /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_ref_unchecked<T: $trait_<$($args)*>>(&self) -> &T {
-                &*(self as *const Self as *const T)
-            }
-
-            /// Returns some mutable reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_mut<T: $trait_<$($args)*>>(&mut self) -> $crate::__::Option<&mut T> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Option::Some(self.downcast_mut_unchecked())
+                /// Returns some reference to the boxed value if it is of type `T`, or
+                /// `None` if it isn't.
+                #[inline]
+                pub fn downcast_ref<T: $trait_<$($args)*>>(&self) -> $crate::__::Option<&T> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Option::Some(self.downcast_ref_unchecked())
+                        }
+                    } else {
+                        $crate::__::Option::None
                     }
-                } else {
-                    $crate::__::Option::None
                 }
-            }
 
-            /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_mut_unchecked<T: $trait_<$($args)*>>(&mut self) -> &mut T {
-                &mut *(self as *mut Self as *mut T)
+                /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_ref_unchecked<T: $trait_<$($args)*>>(&self) -> &T {
+                    &*(self as *const Self as *const T)
+                }
+
+                /// Returns some mutable reference to the boxed value if it is of type `T`, or
+                /// `None` if it isn't.
+                #[inline]
+                pub fn downcast_mut<T: $trait_<$($args)*>>(&mut self) -> $crate::__::Option<&mut T> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Option::Some(self.downcast_mut_unchecked())
+                        }
+                    } else {
+                        $crate::__::Option::None
+                    }
+                }
+
+                /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_mut_unchecked<T: $trait_<$($args)*>>(&mut self) -> &mut T {
+                    &mut *(self as *mut Self as *mut T)
+                }
             }
         }
     };
@@ -289,7 +293,7 @@ macro_rules! mopafy_only_core_internal {
 macro_rules! mopafy_only_core {
     ($trait_:ident $($t:tt)*) => {
         parse_generics_shim! {
-            { constr, params },
+            { .. },
             then mopafy_only_core_internal!($trait_),
             $($t)*
         }
@@ -362,7 +366,7 @@ macro_rules! mopafy {
     ($trait_:ident $($t:tt)*) => {
         mopafy_only_core!($trait_ $($t)*);
         parse_generics_shim! {
-            { constr, params },
+            { .. },
             then mopafy_internal!($trait_),
             $($t)*
         }
@@ -372,6 +376,8 @@ macro_rules! mopafy {
 #[cfg(test)]
 mod tests {
     use std::prelude::v1::*;
+    #[macro_use]
+    use parse_generics_shim;
 
     trait Float {}
     impl Float for f32 {}

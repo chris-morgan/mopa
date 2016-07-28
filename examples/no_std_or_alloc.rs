@@ -16,6 +16,10 @@ fn main() { }
 extern crate mopa;
 
 #[cfg(feature = "no_std_examples")]
+#[macro_use]
+extern crate parse_generics_shim;
+
+#[cfg(feature = "no_std_examples")]
 extern crate libc;
 
 #[cfg(feature = "no_std_examples")]
@@ -24,7 +28,7 @@ pub mod silly_wrapper_to_save_writing_the_whole_cfg_incantation_on_every_item {
 
     trait PanicAny: Panic + ::mopa::Any { }
 
-    mopafy!(PanicAny, only core);
+    mopafy_only_core!(PanicAny);
 
     impl Panic for i32 { }
 

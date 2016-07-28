@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate mopa;
+#[macro_use]
+extern crate parse_generics_shim;
 
 use mopa::Any;
 
