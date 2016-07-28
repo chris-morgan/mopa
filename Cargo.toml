@@ -10,5 +10,8 @@ readme = "README.md"
 keywords = ["any", "macro"]
 license = "MIT/Apache-2.0"
 
+[dependencies]
+parse-generics-shim = "0.*"
+
 [features]
 no_std_examples = []
