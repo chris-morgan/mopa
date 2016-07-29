@@ -136,7 +136,6 @@
 //! objects are probably not the right solution; they’re good for cases with user-defined
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
-#![feature(trace_macros)]
 #![no_std]
 
 #[cfg(test)]
@@ -144,8 +143,6 @@
 extern crate std;
 #[macro_use]
 extern crate parse_generics_shim;
-
-trace_macros!(true);
 
 /// Implementation details of the `mopafy!` macro.
 #[doc(hidden)]
@@ -414,6 +411,7 @@ mod tests {
     trait Parameterized<A, B>: super::Any {
         fn test(&self, a: A, b: &B) -> i32;
     }
+
     mopafy!(Parameterized<A, B>);
 
     impl <'a, B> Parameterized<&'a i32, B> for Benny {
@@ -433,25 +431,31 @@ mod tests {
     impl Float for f64 {}
 
     trait Deep<F: Float> {}
+    struct DeepStruct;
+    impl<F: Float> Deep<F> for DeepStruct {}
 
     trait Constrained<X, F: Float, D: Deep<F>>: super::Any {
         // Don't ask me why
         fn roundness(&self) -> i16;
     }
 
-    mopafy!(Constrained<X, F: Float, D: Deep<F>>);
+    mopafy!(Constrained<X, F: Float, D: Deep<F> >);
+    //                                         ^
+    // This space is currently very important, if you don't include it, the compiler
+    // will think it's a bitshift operator `>>` instead of syntax for generics.
+    // Maybe there is a way to fix this?
 
-    // impl<D: Deep<f32>> Constrained<i32, f32, D> for Benny {
-    //     fn roundness(&self) -> i16 {
-    //         2i16
-    //     }
-    // }
+    impl<F: Float, D: Deep<F>> Constrained<u8, F, D> for Benny {
+        fn roundness(&self) -> i16 {
+            2i16
+        }
+    }
 
-    // impl<D: Deep<f64>> Constrained<u8, f64, D> for Chris {
-    //     fn roundness(&self) -> i16 {
-    //         5i16
-    //     }
-    // }
+    impl<X, F: Float, D: Deep<F>> Constrained<X, F, D> for Chris {
+        fn roundness(&self) -> i16 {
+            5i16
+        }
+    }
 
     #[test]
     fn test_ref() {
@@ -535,7 +539,7 @@ mod tests {
     fn constrained() {
         let i123 = 123;
         let mut benny = Benny { kilograms_of_food: 13 };
-        let mut person: Box<Constrained<i32, f32, Box<f64>>> = Box::new(benny.clone());
+        let mut person: Box<Constrained<u8, f32, DeepStruct>> = Box::new(benny.clone());
         assert!(person.is::<Benny>());
         assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
         assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
