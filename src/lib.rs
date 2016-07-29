@@ -136,7 +136,7 @@
 //! objects are probably not the right solution; they’re good for cases with user-defined
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
-
+#![feature(trace_macros)]
 #![no_std]
 
 #[cfg(test)]
@@ -144,6 +144,8 @@
 extern crate std;
 #[macro_use]
 extern crate parse_generics_shim;
+
+trace_macros!(true);
 
 /// Implementation details of the `mopafy!` macro.
 #[doc(hidden)]
@@ -382,19 +384,7 @@ macro_rules! mopafy {
 
 #[cfg(test)]
 mod tests {
-    #[macro_use]
-    use parse_generics_shim;
     use std::prelude::v1::*;
-
-    trait Float {}
-    impl Float for f32 {}
-    impl Float for f64 {}
-
-    trait Shape<F: Float>: super::Any {
-        fn weight(&self) -> i16;
-    }
-
-    mopafy!(Shape<F: Float>);
 
     trait Person: super::Any {
         fn weight(&self) -> i16;
@@ -437,6 +427,31 @@ mod tests {
             0
         }
     }
+
+    trait Float {}
+    impl Float for f32 {}
+    impl Float for f64 {}
+
+    trait Deep<F: Float> {}
+
+    trait Constrained<X, F: Float, D: Deep<F>>: super::Any {
+        // Don't ask me why
+        fn roundness(&self) -> i16;
+    }
+
+    mopafy!(Constrained<X, F: Float, D: Deep<F>>);
+
+    // impl<D: Deep<f32>> Constrained<i32, f32, D> for Benny {
+    //     fn roundness(&self) -> i16 {
+    //         2i16
+    //     }
+    // }
+
+    // impl<D: Deep<f64>> Constrained<u8, f64, D> for Chris {
+    //     fn roundness(&self) -> i16 {
+    //         5i16
+    //     }
+    // }
 
     #[test]
     fn test_ref() {
@@ -512,6 +527,33 @@ mod tests {
         assert_eq!(person.test(&i123, &"".into()), 123);
         person = Box::new(Chris);
         assert_eq!(person.test(&i123, &"".into()), 0);
+
+        assert!(person.downcast::<Benny>().is_err());
+    }
+
+    #[test]
+    fn constrained() {
+        let i123 = 123;
+        let mut benny = Benny { kilograms_of_food: 13 };
+        let mut person: Box<Constrained<i32, f32, Box<f64>>> = Box::new(benny.clone());
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
+        assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
+        assert_eq!(person.downcast::<Benny>().map(|x| *x).ok(), Some(benny.clone()));
+
+        person = Box::new(benny.clone());
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() }, &benny);
+        assert_eq!(unsafe { person.downcast_mut_unchecked::<Benny>() }, &mut benny);
+        assert_eq!(unsafe { *person.downcast_unchecked::<Benny>() }, benny);
+
+        person = Box::new(benny.clone());
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+        assert_eq!(person.downcast_mut::<Chris>(), None);
+
+        assert_eq!(person.roundness(), 2i16);
+        person = Box::new(Chris);
+        assert_eq!(person.roundness(), 5i16);
 
         assert!(person.downcast::<Benny>().is_err());
     }
