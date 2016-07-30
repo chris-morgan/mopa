@@ -189,25 +189,6 @@ macro_rules! as_item {
 }
 
 #[macro_export]
-macro_rules! shr_to_gt_gt{
-    (@inner () ( $($out:tt)* ) ( $m:ident $($args:tt)* ) ) => {
-        $m ! ( ( $($args)* ) ( $($out)* ) );
-    };
-    
-    (@inner ( >> $($input:tt)* ) ( $($out:tt)* ) ( $m:ident $($args:tt)* ) ) => {
-        shr_to_gt_gt!(@inner ( $($input)* ) ( $($out)* > > ) ( $m $($args)* ) );
-    };
-    
-    (@inner ( $a:tt $($input:tt)* ) ( $($out:tt)* ) ( $m:ident $($args:tt)* ) ) => {
-        shr_to_gt_gt!(@inner ( $($input)* ) ( $($out)* $a ) ( $m $($args)* ) );
-    };
-    
-    ( ( $($input:tt)* ) then $m:ident ! ($($args:tt)*) ) => {
-        shr_to_gt_gt!(@inner ( $($input)* ) () ( $m $($args)* ) );
-    };
-}
-
-#[macro_export]
 macro_rules! mopafy_internal {
     // Not using libstd or liballoc? You can get the &Any and &mut Any methods by specifying what
     // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
@@ -312,20 +293,13 @@ macro_rules! mopafy_only_core_internal {
 }
 
 #[macro_export]
-macro_rules! mopafy_only_core_inner{
-    (( $trait_:ident ) ( $($t:tt)*) ) => {
+macro_rules! mopafy_only_core {
+    ($trait_:ident $($t:tt)*) => {
         parse_generics_shim! {
             { .. },
             then mopafy_only_core_internal!($trait_),
             $($t)*
         }
-    };
-}
-
-#[macro_export]
-macro_rules! mopafy_only_core {
-    ($trait_:ident $($t:tt)*) => {
-        shr_to_gt_gt!(($($t)*) then mopafy_only_core_inner!($trait_));
     };
 }
 
@@ -397,13 +371,6 @@ macro_rules! mopafy {
     // `Box<Any>` methods by just using `mopafy_only_core!(Trait);`.
     ($trait_:ident $($t:tt)*) => {
         mopafy_only_core!($trait_ $($t)*);
-        shr_to_gt_gt!(($($t)*) then mopafy_inner!($trait_));
-    };
-}
-
-#[macro_export]
-macro_rules! mopafy_inner{
-    (( $trait_:ident ) ( $($t:tt)*) ) => {
         parse_generics_shim! {
             { .. },
             then mopafy_internal!($trait_),
