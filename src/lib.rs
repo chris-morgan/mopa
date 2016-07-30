@@ -37,6 +37,8 @@
 //!    ```rust
 //!    #[macro_use]
 //!    extern crate mopa;
+//!    #[macro_use]
+//!    extern crate parse_generics_shim;
 //!    # fn main() { }
 //!    ```
 //!
@@ -53,6 +55,8 @@
 //! ```rust
 //! #[macro_use]
 //! extern crate mopa;
+//! #[macro_use]
+//! extern crate parse_generics_shim;
 //!
 //! struct Bear {
 //!     // This might be a pretty fat bear.
@@ -132,12 +136,13 @@
 //! objects are probably not the right solution; they’re good for cases with user-defined
 //! types across a variety of libraries. But the question of purpose and suitability is open, and I
 //! don’t have a really good example of such a use case here at present. TODO.
-
 #![no_std]
 
 #[cfg(test)]
 #[macro_use]
 extern crate std;
+#[macro_use]
+extern crate parse_generics_shim;
 
 /// Implementation details of the `mopafy!` macro.
 #[doc(hidden)]
@@ -176,6 +181,128 @@ impl<T: core::any::Any> Any for T {
     }
 }
 
+#[macro_export]
+macro_rules! as_item {
+    ($item:item) => {
+        $item
+    };
+}
+
+#[macro_export]
+macro_rules! mopafy_internal {
+    // Not using libstd or liballoc? You can get the &Any and &mut Any methods by specifying what
+    // libcore is here, e.g. `mopafy!(Trait, core = core)`, but you won’t get the `Box<Any>`
+    // methods.
+    (
+        $trait_:ident
+        {
+            constr: [ $($constr:tt)* ],
+            params: [ $($args:tt)* ],
+            $($_fields:tt)*
+        },
+    ) => {
+        as_item! {
+            #[allow(dead_code)]
+            impl <$($constr)*> $trait_ <$($args)*> {
+                /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
+                #[inline]
+                pub fn downcast<T: $trait_<$($args)*>>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Result::Ok(self.downcast_unchecked())
+                        }
+                    } else {
+                        $crate::__::Result::Err(self)
+                    }
+                }
+
+                /// Returns the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_unchecked<T: $trait_<$($args)*>>(self: Box<Self>) -> Box<T> {
+                    Box::from_raw(Box::into_raw(self) as *mut T)
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! mopafy_only_core_internal {
+    // Not using libstd/liballoc? The core functionality can do without them; you will still have
+    // the `&Any` and `&mut Any` methods but will lose the `Box<Any>` methods.
+    (
+        $trait_:ident
+        {
+            constr: [ $($constr:tt)* ],
+            params: [ $($args:tt)* ],
+            $($_fields:tt)*
+        },
+    ) => {
+        as_item! {
+            #[allow(dead_code)]
+            impl <$($constr)*> $trait_ <$($args)*> {
+                /// Returns true if the boxed type is the same as `T`
+                #[inline]
+                pub fn is<T: $trait_<$($args)*>>(&self) -> bool {
+                    $crate::__::TypeId::of::<T>() == $crate::Any::__get_type_id(self)
+                }
+
+                /// Returns some reference to the boxed value if it is of type `T`, or
+                /// `None` if it isn't.
+                #[inline]
+                pub fn downcast_ref<T: $trait_<$($args)*>>(&self) -> $crate::__::Option<&T> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Option::Some(self.downcast_ref_unchecked())
+                        }
+                    } else {
+                        $crate::__::Option::None
+                    }
+                }
+
+                /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_ref_unchecked<T: $trait_<$($args)*>>(&self) -> &T {
+                    &*(self as *const Self as *const T)
+                }
+
+                /// Returns some mutable reference to the boxed value if it is of type `T`, or
+                /// `None` if it isn't.
+                #[inline]
+                pub fn downcast_mut<T: $trait_<$($args)*>>(&mut self) -> $crate::__::Option<&mut T> {
+                    if self.is::<T>() {
+                        unsafe {
+                            $crate::__::Option::Some(self.downcast_mut_unchecked())
+                        }
+                    } else {
+                        $crate::__::Option::None
+                    }
+                }
+
+                /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
+                /// If you are not *absolutely certain* of `T`, you *must not* call this.
+                #[inline]
+                pub unsafe fn downcast_mut_unchecked<T: $trait_<$($args)*>>(&mut self) -> &mut T {
+                    &mut *(self as *mut Self as *mut T)
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! mopafy_only_core {
+    ($trait_:ident $($t:tt)*) => {
+        parse_generics_shim! {
+            { .. },
+            then mopafy_only_core_internal!($trait_),
+            $($t)*
+        }
+    };
+}
+
 /// The macro for implementing all the `Any` methods on your own trait.
 ///
 /// # Instructions for use
@@ -196,8 +323,11 @@ impl<T: core::any::Any> Any for T {
 ///
 ///    ```rust
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    trait Trait: mopa::Any { }
 ///    mopafy!(Trait);
+///    trait Params<A, B>: mopa::Any { }
+///    mopafy!(Params<A, B>);
 ///    # fn main() { }
 ///    ```
 ///
@@ -205,8 +335,11 @@ impl<T: core::any::Any> Any for T {
 ///
 ///    ```rust
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    # trait Trait: mopa::Any { }
-///    mopafy!(Trait, only core);
+///    mopafy_only_core!(Trait);
+///    trait Params<A, B>: mopa::Any { }
+///    mopafy_only_core!(Params<A, B>);
 ///    # fn main() { }
 ///    ```
 ///
@@ -221,10 +354,13 @@ impl<T: core::any::Any> Any for T {
 ///    # // channels where #[feature] isn’t allowed.
 ///    # #![feature(alloc)]
 ///    # #[macro_use] extern crate mopa;
+///    # #[macro_use] extern crate parse_generics_shim;
 ///    # extern crate alloc;
 ///    # trait Trait: mopa::Any { }
 ///    use alloc::boxed::Box;
 ///    mopafy!(Trait);
+///    trait Params<A, B>: mopa::Any { }
+///    mopafy!(Params<A, B>);
 ///    # fn main() { }
 ///    ```
 #[macro_export]
@@ -232,83 +368,13 @@ macro_rules! mopafy {
     // Implement the full suite of `Any` methods: those of `&Any`, `&mut Any` and `Box<Any>`.
     //
     // If you’re not using libstd, you’ll need to `use alloc::boxed::Box;`, or forego the
-    // `Box<Any>` methods by just using `mopafy!(Trait, only core);`.
-    ($trait_:ident) => {
-        mopafy!($trait_, only core);
-
-        #[allow(dead_code)]
-        impl $trait_ {
-            /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
-            #[inline]
-            pub fn downcast<T: $trait_>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Result::Ok(self.downcast_unchecked())
-                    }
-                } else {
-                    $crate::__::Result::Err(self)
-                }
-            }
-
-            /// Returns the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_unchecked<T: $trait_>(self: Box<Self>) -> Box<T> {
-                Box::from_raw(Box::into_raw(self) as *mut T)
-            }
-        }
-    };
-
-    // Not using libstd/liballoc? The core functionality can do without them; you will still have
-    // the `&Any` and `&mut Any` methods but will lose the `Box<Any>` methods.
-    ($trait_:ident, only core) => {
-        #[allow(dead_code)]
-        impl $trait_ {
-            /// Returns true if the boxed type is the same as `T`
-            #[inline]
-            pub fn is<T: $trait_>(&self) -> bool {
-                $crate::__::TypeId::of::<T>() == $crate::Any::__get_type_id(self)
-            }
-
-            /// Returns some reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_ref<T: $trait_>(&self) -> $crate::__::Option<&T> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Option::Some(self.downcast_ref_unchecked())
-                    }
-                } else {
-                    $crate::__::Option::None
-                }
-            }
-
-            /// Returns a reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_ref_unchecked<T: $trait_>(&self) -> &T {
-                &*(self as *const Self as *const T)
-            }
-
-            /// Returns some mutable reference to the boxed value if it is of type `T`, or
-            /// `None` if it isn't.
-            #[inline]
-            pub fn downcast_mut<T: $trait_>(&mut self) -> $crate::__::Option<&mut T> {
-                if self.is::<T>() {
-                    unsafe {
-                        $crate::__::Option::Some(self.downcast_mut_unchecked())
-                    }
-                } else {
-                    $crate::__::Option::None
-                }
-            }
-
-            /// Returns a mutable reference to the boxed value, blindly assuming it to be of type `T`.
-            /// If you are not *absolutely certain* of `T`, you *must not* call this.
-            #[inline]
-            pub unsafe fn downcast_mut_unchecked<T: $trait_>(&mut self) -> &mut T {
-                &mut *(self as *mut Self as *mut T)
-            }
+    // `Box<Any>` methods by just using `mopafy_only_core!(Trait);`.
+    ($trait_:ident $($t:tt)*) => {
+        mopafy_only_core!($trait_ $($t)*);
+        parse_generics_shim! {
+            { .. },
+            then mopafy_internal!($trait_),
+            $($t)*
         }
     };
 }
@@ -340,6 +406,51 @@ mod tests {
 
     impl Person for Chris {
         fn weight(&self) -> i16 { -5 /* antigravity device! cool! */ }
+    }
+
+    trait Parameterized<A, B>: super::Any {
+        fn test(&self, a: A, b: &B) -> i32;
+    }
+
+    mopafy!(Parameterized<A, B>);
+
+    impl <'a, B> Parameterized<&'a i32, B> for Benny {
+        fn test(&self, x: &'a i32, _: &B) -> i32 {
+            *x
+        }
+    }
+
+    impl <A, B> Parameterized<A, B> for Chris {
+        fn test(&self, _: A, _: &B) -> i32 {
+            0
+        }
+    }
+
+    trait Float {}
+    impl Float for f32 {}
+    impl Float for f64 {}
+
+    trait Deep<F: Float> {}
+    struct DeepStruct;
+    impl<F: Float> Deep<F> for DeepStruct {}
+
+    trait Constrained<X, F: Float, D: Deep<F>>: super::Any {
+        // Don't ask me why
+        fn roundness(&self) -> i16;
+    }
+
+    mopafy!(Constrained<X, F: Float, D: Deep<F>>);
+
+    impl<F: Float, D: Deep<F>> Constrained<u8, F, D> for Benny {
+        fn roundness(&self) -> i16 {
+            2i16
+        }
+    }
+
+    impl<X, F: Float, D: Deep<F>> Constrained<X, F, D> for Chris {
+        fn roundness(&self) -> i16 {
+            5i16
+        }
     }
 
     #[test]
@@ -391,5 +502,58 @@ mod tests {
         assert_eq!(person.downcast_ref::<Chris>(), None);
         assert_eq!(person.downcast_mut::<Chris>(), None);
         assert!(person.downcast::<Chris>().err().is_some());
+    }
+
+    #[test]
+    fn parameterized() {
+        let i123 = 123;
+        let mut benny = Benny { kilograms_of_food: 13 };
+        let mut person: Box<Parameterized<&i32, String>> = Box::new(benny.clone());
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
+        assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
+        assert_eq!(person.downcast::<Benny>().map(|x| *x).ok(), Some(benny.clone()));
+
+        person = Box::new(benny.clone());
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() }, &benny);
+        assert_eq!(unsafe { person.downcast_mut_unchecked::<Benny>() }, &mut benny);
+        assert_eq!(unsafe { *person.downcast_unchecked::<Benny>() }, benny);
+
+        person = Box::new(benny.clone());
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+        assert_eq!(person.downcast_mut::<Chris>(), None);
+
+        assert_eq!(person.test(&i123, &"".into()), 123);
+        person = Box::new(Chris);
+        assert_eq!(person.test(&i123, &"".into()), 0);
+
+        assert!(person.downcast::<Benny>().is_err());
+    }
+
+    #[test]
+    fn constrained() {
+        let mut benny = Benny { kilograms_of_food: 13 };
+        let mut person: Box<Constrained<u8, f32, DeepStruct>> = Box::new(benny.clone());
+        assert!(person.is::<Benny>());
+        assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
+        assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
+        assert_eq!(person.downcast::<Benny>().map(|x| *x).ok(), Some(benny.clone()));
+
+        person = Box::new(benny.clone());
+        assert_eq!(unsafe { person.downcast_ref_unchecked::<Benny>() }, &benny);
+        assert_eq!(unsafe { person.downcast_mut_unchecked::<Benny>() }, &mut benny);
+        assert_eq!(unsafe { *person.downcast_unchecked::<Benny>() }, benny);
+
+        person = Box::new(benny.clone());
+        assert!(!person.is::<Chris>());
+        assert_eq!(person.downcast_ref::<Chris>(), None);
+        assert_eq!(person.downcast_mut::<Chris>(), None);
+
+        assert_eq!(person.roundness(), 2i16);
+        person = Box::new(Chris);
+        assert_eq!(person.roundness(), 5i16);
+
+        assert!(person.downcast::<Benny>().is_err());
     }
 }
