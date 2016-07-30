@@ -566,7 +566,6 @@ mod tests {
 
     #[test]
     fn constrained() {
-        let i123 = 123;
         let mut benny = Benny { kilograms_of_food: 13 };
         let mut person: Box<Constrained<u8, f32, DeepStruct>> = Box::new(benny.clone());
         assert!(person.is::<Benny>());
