@@ -23,10 +23,10 @@
 //! its original type, right? Alas, you can’t write a type like `Box<Person + Any>` (at present,
 //! anyway). So what do you do instead? Do you give up? No, no! No, no! Enter MOPA.
 //!
-//! > There once was a quite friendly trait  
-//! > Called `Person`, with much on its plate.  
-//! >     “I need to be `Any`  
-//! >     To downcast to `Benny`—  
+//! > There once was a quite friendly trait
+//! > Called `Person`, with much on its plate.
+//! >     “I need to be `Any`
+//! >     To downcast to `Benny`—
 //! > But I’m not, so I guess I’ll just wait.”
 //!
 //! A pitiful tale, isn’t it? Especially given that there was a bear chasing it with intent to eat
@@ -60,7 +60,7 @@
 //! }
 //!
 //! impl Bear {
-//!     fn eat(&mut self, person: Box<Person>) {
+//!     fn eat(&mut self, person: Box<dyn Person>) {
 //!         self.fatness = (self.fatness as i16 + person.weight()) as u16;
 //!     }
 //! }
@@ -107,7 +107,7 @@
 //!     fn weight(&self) -> i16 { -5 /* antigravity device! cool! */ }
 //! }
 //!
-//! fn simulate_simulation(person: Box<Person>, bear: &mut Bear) {
+//! fn simulate_simulation(person: Box<dyn Person>, bear: &mut Bear) {
 //!     if person.is::<Benny>() {
 //!         // None of the others do, but Benny knows this particular
 //!         // bear by reputation and he’s *really* going to be worried.
@@ -237,7 +237,7 @@ macro_rules! mopafy {
         mopafy!($trait_, only core);
 
         #[allow(dead_code)]
-        impl $trait_ {
+        impl dyn $trait_ {
             /// Returns the boxed value if it is of type `T`, or `Err(Self)` if it isn't.
             #[inline]
             pub fn downcast<T: $trait_>(self: Box<Self>) -> $crate::__::Result<Box<T>, Box<Self>> {
@@ -263,7 +263,7 @@ macro_rules! mopafy {
     // the `&Any` and `&mut Any` methods but will lose the `Box<Any>` methods.
     ($trait_:ident, only core) => {
         #[allow(dead_code)]
-        impl $trait_ {
+        impl dyn $trait_ {
             /// Returns true if the boxed type is the same as `T`
             #[inline]
             pub fn is<T: $trait_>(&self) -> bool {
@@ -287,7 +287,9 @@ macro_rules! mopafy {
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
             pub unsafe fn downcast_ref_unchecked<T: $trait_>(&self) -> &T {
-                &*(self as *const Self as *const T)
+                debug_assert!(self.is::<T>());
+                // SAFETY: caller guarantees that T is the correct type
+                unsafe { &*(self as *const dyn $trait_ as *const T) }
             }
 
             /// Returns some mutable reference to the boxed value if it is of type `T`, or
@@ -307,7 +309,9 @@ macro_rules! mopafy {
             /// If you are not *absolutely certain* of `T`, you *must not* call this.
             #[inline]
             pub unsafe fn downcast_mut_unchecked<T: $trait_>(&mut self) -> &mut T {
-                &mut *(self as *mut Self as *mut T)
+                debug_assert!(self.is::<T>());
+                // SAFETY: caller guarantees that T is the correct type
+                unsafe { &mut *(self as *mut dyn $trait_ as *mut T) }
             }
         }
     };
@@ -346,7 +350,7 @@ mod tests {
     fn test_ref() {
         let benny = Benny { kilograms_of_food: 13 };
         let benny_ptr: *const Benny = &benny;
-        let person: &Person = &benny;
+        let person: &dyn Person = &benny;
 
         assert!(person.is::<Benny>());
         assert_eq!(person.downcast_ref::<Benny>().map(|x| x as *const Benny), Some(benny_ptr));
@@ -360,7 +364,7 @@ mod tests {
     fn test_mut() {
         let mut benny = Benny { kilograms_of_food: 13 };
         let benny_ptr: *const Benny = &benny;
-        let person: &mut Person = &mut benny;
+        let person: &mut dyn Person = &mut benny;
         assert!(person.is::<Benny>());
         assert_eq!(person.downcast_ref::<Benny>().map(|x| x as *const Benny), Some(benny_ptr));
         assert_eq!(person.downcast_mut::<Benny>().map(|x| &*x as *const Benny), Some(benny_ptr));
@@ -375,7 +379,7 @@ mod tests {
     #[test]
     fn test_box() {
         let mut benny = Benny { kilograms_of_food: 13 };
-        let mut person: Box<Person> = Box::new(benny.clone());
+        let mut person: Box<dyn Person> = Box::new(benny.clone());
         assert!(person.is::<Benny>());
         assert_eq!(person.downcast_ref::<Benny>(), Some(&benny));
         assert_eq!(person.downcast_mut::<Benny>(), Some(&mut benny));
@@ -386,7 +390,7 @@ mod tests {
         assert_eq!(unsafe { person.downcast_mut_unchecked::<Benny>() }, &mut benny);
         assert_eq!(unsafe { *person.downcast_unchecked::<Benny>() }, benny);
 
-        person = Box::new(benny.clone());
+        person = Box::new(benny);
         assert!(!person.is::<Chris>());
         assert_eq!(person.downcast_ref::<Chris>(), None);
         assert_eq!(person.downcast_mut::<Chris>(), None);

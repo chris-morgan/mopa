@@ -3,12 +3,13 @@ name = "mopa"
 version = "0.2.2"
 authors = ["Chris Morgan <me@chrismorgan.info>"]
 description = "My Own Personal Any: get your own Any with additional functionality"
-#documentation = 
-#homepage = 
+#documentation =
+#homepage =
 repository = "https://github.com/chris-morgan/mopa"
 readme = "README.md"
 keywords = ["any", "macro"]
 license = "MIT/Apache-2.0"
+edition = "2021"
 
 [features]
 no_std_examples = []
