@@ -15,10 +15,10 @@ able to do various things, but you also want to be able to conveniently downcast
 its original type, right? Alas, you can’t write a type like `Box<Person + Any>` (at present,
 anyway). So what do you do instead? Do you give up? No, no! No, no! Enter MOPA.
 
-> There once was a quite friendly trait  
-> Called `Person`, with much on its plate.  
->     “I need to be `Any`  
->     To downcast to `Benny`—  
+> There once was a quite friendly trait
+> Called `Person`, with much on its plate.
+>     “I need to be `Any`
+>     To downcast to `Benny`—
 > But I’m not, so I guess I’ll just wait.”
 
 A pitiful tale, isn’t it? Especially given that there was a bear chasing it with intent to eat
@@ -51,7 +51,7 @@ struct Bear {
 }
 
 impl Bear {
-    fn eat(&mut self, person: Box<Person>) {
+    fn eat(&mut self, person: Box<dyn Person>) {
         self.fatness = (self.fatness as i16 + person.weight()) as u16;
     }
 }
@@ -98,7 +98,7 @@ impl Person for Chris {
     fn weight(&self) -> i16 { -5 /* antigravity device! cool! */ }
 }
 
-fn simulate_simulation(person: Box<Person>, bear: &mut Bear) {
+fn simulate_simulation(person: Box<dyn Person>, bear: &mut Bear) {
     if person.is::<Benny>() {
         // None of the others do, but Benny knows this particular
         // bear by reputation and he’s *really* going to be worried.

@@ -10,6 +10,6 @@ mopafy!(PanicAny);
 impl PanicAny for i32 { }
 
 fn main() {
-    let p: &PanicAny = &2;
+    let p: &dyn PanicAny = &2;
     println!("{}", p.is::<i32>());
 }
